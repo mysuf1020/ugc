@@ -13,21 +13,27 @@ export async function GET() {
           id: "global_settings",
           aiProviderPreference: "gemini",
           defaultTtsVoice: "id-ID-ArdiNeural",
+          talkingAvatarProvider: "did",
         },
       });
     }
 
     return NextResponse.json({
       aiProviderPreference: settings.aiProviderPreference,
+      talkingAvatarProvider: settings.talkingAvatarProvider,
       hasGeminiKey: Boolean(settings.geminiApiKey || process.env.GEMINI_API_KEY),
       hasOpenAiKey: Boolean(settings.openAiApiKey || process.env.OPENAI_API_KEY),
       hasElevenLabsKey: Boolean(settings.elevenLabsApiKey || process.env.ELEVENLABS_API_KEY),
+      hasDIdKey: Boolean(settings.dIdApiKey || process.env.DID_API_KEY),
+      hasReplicateToken: Boolean(settings.replicateApiToken || process.env.REPLICATE_API_TOKEN),
       defaultTtsVoice: settings.defaultTtsVoice,
       hasAdminPin: Boolean(settings.adminPin),
-      // Mask keys for safety
+      // Mask keys
       geminiApiKey: settings.geminiApiKey ? "••••••••" + settings.geminiApiKey.slice(-4) : "",
       openAiApiKey: settings.openAiApiKey ? "••••••••" + settings.openAiApiKey.slice(-4) : "",
       elevenLabsApiKey: settings.elevenLabsApiKey ? "••••••••" + settings.elevenLabsApiKey.slice(-4) : "",
+      dIdApiKey: settings.dIdApiKey ? "••••••••" + settings.dIdApiKey.slice(-4) : "",
+      replicateApiToken: settings.replicateApiToken ? "••••••••" + settings.replicateApiToken.slice(-4) : "",
     });
   } catch (error) {
     console.error("Failed to fetch settings:", error);
@@ -40,19 +46,22 @@ export async function POST(request: Request) {
     const body = await request.json();
     const {
       aiProviderPreference,
+      talkingAvatarProvider,
       geminiApiKey,
       openAiApiKey,
       elevenLabsApiKey,
+      dIdApiKey,
+      replicateApiToken,
       defaultTtsVoice,
       adminPin,
     } = body;
 
     const updateData: Record<string, unknown> = {
       aiProviderPreference: aiProviderPreference ?? "gemini",
+      talkingAvatarProvider: talkingAvatarProvider ?? "did",
       defaultTtsVoice: defaultTtsVoice ?? "id-ID-ArdiNeural",
     };
 
-    // Only update API keys if provided (and not the masked dots)
     if (geminiApiKey !== undefined && !geminiApiKey.startsWith("••••")) {
       updateData.geminiApiKey = geminiApiKey.trim() || null;
     }
@@ -61,6 +70,12 @@ export async function POST(request: Request) {
     }
     if (elevenLabsApiKey !== undefined && !elevenLabsApiKey.startsWith("••••")) {
       updateData.elevenLabsApiKey = elevenLabsApiKey.trim() || null;
+    }
+    if (dIdApiKey !== undefined && !dIdApiKey.startsWith("••••")) {
+      updateData.dIdApiKey = dIdApiKey.trim() || null;
+    }
+    if (replicateApiToken !== undefined && !replicateApiToken.startsWith("••••")) {
+      updateData.replicateApiToken = replicateApiToken.trim() || null;
     }
     if (adminPin !== undefined) {
       updateData.adminPin = adminPin.trim() || null;
@@ -77,11 +92,10 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      aiProviderPreference: updated.aiProviderPreference,
+      talkingAvatarProvider: updated.talkingAvatarProvider,
+      hasDIdKey: Boolean(updated.dIdApiKey),
+      hasReplicateToken: Boolean(updated.replicateApiToken),
       hasGeminiKey: Boolean(updated.geminiApiKey),
-      hasOpenAiKey: Boolean(updated.openAiApiKey),
-      defaultTtsVoice: updated.defaultTtsVoice,
-      hasAdminPin: Boolean(updated.adminPin),
     });
   } catch (error) {
     console.error("Failed to save settings:", error);

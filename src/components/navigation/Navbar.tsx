@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { Video, PlusCircle, Settings, Film, Sparkles } from "lucide-react";
+import { Video, PlusCircle, Settings, Film, UserCheck, Sparkles } from "lucide-react";
 
 export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full border-b border-zinc-800/80 bg-zinc-950/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
         {/* Brand Logo */}
-        <Link href="/projects" className="flex items-center gap-2.5 group">
+        <Link href="/avatar-studio" className="flex items-center gap-2.5 group">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-emerald-400 p-0.5 shadow-lg shadow-indigo-500/20 group-hover:scale-105 transition-transform">
             <div className="flex h-full w-full items-center justify-center rounded-[10px] bg-zinc-950">
               <Film className="h-5 w-5 text-indigo-400 group-hover:text-emerald-400 transition-colors" />
@@ -16,7 +16,7 @@ export default function Navbar() {
             <div className="flex items-center gap-1.5">
               <span className="font-bold text-base tracking-tight text-white">UGC Studio</span>
               <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-400 border border-indigo-500/20">
-                PRO
+                AI AVATAR
               </span>
             </div>
             <span className="text-[11px] text-zinc-400 font-medium -mt-0.5">Creator Video Engine</span>
@@ -25,6 +25,14 @@ export default function Navbar() {
 
         {/* Center / Nav Links */}
         <nav className="flex items-center gap-1 sm:gap-2">
+          <Link
+            href="/avatar-studio"
+            className="flex items-center gap-2 rounded-lg bg-indigo-600/10 border border-indigo-500/20 px-3.5 py-2 text-sm font-semibold text-indigo-400 hover:bg-indigo-600/20 transition-colors"
+          >
+            <UserCheck className="h-4 w-4" />
+            <span>AI Avatar Video</span>
+          </Link>
+
           <Link
             href="/projects"
             className="flex items-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium text-zinc-300 hover:bg-zinc-900 hover:text-white transition-colors"
@@ -45,11 +53,11 @@ export default function Navbar() {
         {/* Action Button */}
         <div className="flex items-center gap-3">
           <Link
-            href="/projects/new"
-            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-md shadow-indigo-600/25 hover:from-indigo-500 hover:to-indigo-400 transition-all active:scale-[0.98]"
+            href="/avatar-studio"
+            className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 hover:from-indigo-500 hover:to-indigo-400 transition-all active:scale-[0.98]"
           >
-            <PlusCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">New Video</span>
+            <Sparkles className="h-4 w-4" />
+            <span className="hidden sm:inline">Buat Video Avatar</span>
           </Link>
         </div>
       </div>

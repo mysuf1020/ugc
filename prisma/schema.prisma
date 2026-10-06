@@ -13,10 +13,21 @@ model Project {
   brandName          String
   productDescription String
   targetAudience     String?
-  tone               String       @default("casual") // casual, energetic, emotional, hard-sell
+  tone               String       @default("casual")
   targetDurationSec  Int          @default(30)
   aspectRatio        String       @default("9:16")
-  status             String       @default("DRAFT") // DRAFT, SCRIPTED, RECORDED, READY_TO_RENDER, RENDERED
+  status             String       @default("DRAFT") // DRAFT, GENERATING, COMPLETED, FAILED
+
+  // AI Talking Avatar Fields
+  avatarImageUrl     String?      // Path foto wajah kreator
+  productImageUrl    String?      // Path foto produk/brand
+  scriptText         String?      // Naskah yang diucapkan
+  voiceId            String       @default("id-ID-ArdiNeural")
+  layoutStyle        String       @default("SPLIT_SCREEN") // SPLIT_SCREEN, PIP_BUBBLE, FULL_PRESENTER
+  hookHeadline       String?      // Teks banner viral atas
+  talkingVideoUrl    String?      // Video hasil Lip-sync (D-ID / Replicate)
+  finalVideoUrl      String?      // Video akhir MP4 9:16 hasil composite
+
   createdAt          DateTime     @default(now())
   updatedAt          DateTime     @updatedAt
 
@@ -35,7 +46,7 @@ model Script {
   demoText          String
   ctaText           String
   fullScript        String
-  hookOptions       String?  // JSON string containing alternative generated hooks
+  hookOptions       String?
   selectedHookIndex Int      @default(0)
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -46,14 +57,14 @@ model Scene {
   projectId    String
   project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   orderIndex   Int
-  sceneType    String      // HOOK, PROBLEM, SOLUTION, DEMO, CTA
+  sceneType    String
   title        String
   scriptLine   String
   durationEst  Float       @default(5.0)
-  mediaType    String      @default("CAMERA_TAKE") // CAMERA_TAKE, B_ROLL, AI_TTS
-  activeTakeId String?     // ID of the chosen take
+  mediaType    String      @default("CAMERA_TAKE")
+  activeTakeId String?
   overlayText  String?
-  textStyle    String?     // JSON style for text positioning & colors
+  textStyle    String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 
@@ -65,7 +76,7 @@ model SceneTake {
   sceneId     String
   scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
   takeNumber  Int
-  filePath    String   // relative path to stored video
+  filePath    String
   durationSec Float    @default(0.0)
   fileSize    Int      @default(0)
   mimeType    String   @default("video/webm")
@@ -79,7 +90,7 @@ model VideoExport {
   resolution   String    @default("1080x1920")
   outputPath   String?
   fileSize     Int?
-  status       String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  status       String    @default("PENDING")
   progress     Int       @default(0)
   errorMessage String?
   startedAt    DateTime  @default(now())
@@ -87,12 +98,18 @@ model VideoExport {
 }
 
 model AppSetting {
-  id                   String   @id @default("global_settings")
-  aiProviderPreference String   @default("gemini") // gemini, openai, offline
-  geminiApiKey         String?
-  openAiApiKey         String?
-  elevenLabsApiKey     String?
-  defaultTtsVoice      String   @default("id-ID-ArdiNeural")
-  adminPin             String?  // Optional PIN for VPS access protection
-  updatedAt            DateTime @updatedAt
+  id                     String   @id @default("global_settings")
+  aiProviderPreference   String   @default("gemini")
+  geminiApiKey           String?
+  openAiApiKey           String?
+  elevenLabsApiKey       String?
+  defaultTtsVoice        String   @default("id-ID-ArdiNeural")
+  adminPin               String?
+  
+  // Talking Avatar AI Keys
+  talkingAvatarProvider  String   @default("did") // did, replicate
+  dIdApiKey              String?  // Basic Auth API Key D-ID
+  replicateApiToken      String?  // Replicate API Token
+  
+  updatedAt              DateTime @updatedAt
 }
