@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { generateTalkingAvatarVideo, compositeFinalUgcVideo } from "@/lib/talking-avatar";
+import { generateFullUgcVideo } from "@/lib/ugc-generator";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { projectId, scriptText, hookHeadline, layoutStyle = "SPLIT_SCREEN" } = body;
+    const {
+      projectId,
+      scriptText,
+      hookHeadline,
+      brandName,
+      productUsp,
+      voiceId = "id-ID-ArdiNeural",
+    } = body;
 
     if (!projectId || !scriptText) {
       return NextResponse.json(
-        { error: "projectId and scriptText are required" },
+        { error: "projectId dan naskah bicara wajib diisi." },
         { status: 400 }
       );
     }
@@ -20,66 +27,45 @@ export async function POST(request: Request) {
 
     if (!project || !project.avatarImageUrl || !project.productImageUrl) {
       return NextResponse.json(
-        { error: "Foto wajah dan foto produk brand wajib diupload terlebih dahulu." },
+        { error: "Harap upload foto model karakter dan foto produk barang terlebih dahulu." },
         { status: 400 }
       );
     }
 
-    // Update project state to GENERATING
+    // Update state to GENERATING
     await prisma.project.update({
       where: { id: projectId },
       data: {
         status: "GENERATING",
         scriptText,
-        hookHeadline: hookHeadline || "RAHASIA BRAND INI! 🔥",
-        layoutStyle,
+        hookHeadline: hookHeadline || "RAHASIA PRODUK INI! 🔥",
+        brandName: brandName || project.brandName,
       },
     });
 
-    // 1. Generate Talking Avatar video
-    const avatarResult = await generateTalkingAvatarVideo({
+    // Run Full UGC Video Generator: Model Char + Model Barang + Voiceover Audio!
+    const result = await generateFullUgcVideo({
       projectId,
-      avatarImagePath: project.avatarImageUrl,
+      charImagePath: project.avatarImageUrl,
+      productImagePath: project.productImageUrl,
+      brandName: brandName || project.brandName,
+      productUsp: productUsp || project.productDescription,
       scriptText,
-      voiceId: project.voiceId,
-    });
-
-    // 2. Composite Final 9:16 Video
-    let finalVideoUrl = avatarResult.videoUrl;
-    try {
-      finalVideoUrl = await compositeFinalUgcVideo({
-        projectId,
-        talkingVideoPath: avatarResult.videoUrl,
-        productImagePath: project.productImageUrl,
-        hookHeadline: hookHeadline || "RAHASIA BRAND INI! 🔥",
-        scriptText,
-        layoutStyle,
-      });
-    } catch (compErr) {
-      console.warn("Compositing warning, using avatar directly:", compErr);
-    }
-
-    // 3. Update project record to COMPLETED
-    const updated = await prisma.project.update({
-      where: { id: projectId },
-      data: {
-        status: "COMPLETED",
-        talkingVideoUrl: avatarResult.videoUrl,
-        finalVideoUrl: finalVideoUrl,
-      },
+      hookHeadline: hookHeadline || "RAHASIA PRODUK INI! 🔥",
+      voiceId,
     });
 
     return NextResponse.json({
       success: true,
-      talkingVideoUrl: avatarResult.videoUrl,
-      finalVideoUrl,
-      source: avatarResult.source,
-      project: updated,
+      videoUrl: result.videoUrl,
+      audioUrl: result.audioUrl,
+      durationSec: result.durationSec,
+      prompts: result.prompts,
     });
   } catch (error) {
-    console.error("Failed to generate talking avatar UGC:", error);
+    console.error("UGC Video Generation error:", error);
     return NextResponse.json(
-      { error: "Gagal membuat video talking avatar. Silakan coba lagi." },
+      { error: "Gagal membuat video UGC. Pastikan format foto valid." },
       { status: 500 }
     );
   }
