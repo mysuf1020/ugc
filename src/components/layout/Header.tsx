@@ -5,12 +5,7 @@ import { usePathname } from "next/navigation";
 import {
   Search,
   Sparkles,
-  Command,
-  Bell,
   Cpu,
-  Layers,
-  Shield,
-  Plus,
 } from "lucide-react";
 
 export default function Header() {
@@ -21,59 +16,57 @@ export default function Header() {
     if (pathname.includes("/media-vault")) return "Creative Media Vault";
     if (pathname.includes("/voice-lab")) return "Voice & Audio Lab";
     if (pathname.includes("/render-queue")) return "Video Render Queue";
-    if (pathname.includes("/settings")) return "Studio System Settings";
-    if (pathname.includes("/projects/new")) return "Create New Campaign";
-    if (pathname.includes("/projects")) return "Campaign Projects Hub";
+    if (pathname.includes("/settings")) return "Studio Settings";
+    if (pathname.includes("/projects/new")) return "Create Campaign";
+    if (pathname.includes("/projects")) return "Campaign Projects";
     return "Workspace";
   }
 
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-zinc-800/80 bg-zinc-950/80 px-4 sm:px-6 backdrop-blur-md">
+    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6">
       {/* Left: Active Module Breadcrumb */}
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 text-xs">
-          <span className="text-zinc-500 font-medium hidden sm:inline">Workspace</span>
-          <span className="text-zinc-600 hidden sm:inline">/</span>
-          <span className="font-bold text-zinc-100">{getPageTitle()}</span>
-        </div>
+      <div className="flex items-center gap-2 text-xs">
+        <span className="text-slate-400 font-medium hidden sm:inline">Workspace</span>
+        <span className="text-slate-300 hidden sm:inline">/</span>
+        <span className="font-bold text-slate-900 text-sm">{getPageTitle()}</span>
       </div>
 
       {/* Center: Search & Quick Bar */}
       <div className="hidden md:flex items-center flex-1 max-w-md mx-6">
         <div className="relative w-full">
-          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+          <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
           <input
             type="text"
             placeholder="Search campaigns, brands, or voice assets..."
-            className="w-full rounded-xl border border-zinc-800 bg-zinc-900/60 pl-9 pr-12 py-1.5 text-xs text-zinc-200 placeholder-zinc-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 pl-9 pr-12 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:border-slate-400 focus:bg-white focus:outline-none transition-colors"
           />
-          <div className="absolute right-2.5 top-2 flex items-center gap-0.5 rounded border border-zinc-800 bg-zinc-950 px-1 py-0.5 text-[10px] text-zinc-500 font-mono">
+          <div className="absolute right-2.5 top-2 flex items-center gap-0.5 rounded border border-slate-200 bg-white px-1 py-0.5 text-[10px] text-slate-400 font-mono">
             <span>⌘K</span>
           </div>
         </div>
       </div>
 
-      {/* Right: Telemetry & Actions */}
+      {/* Right: Actions */}
       <div className="flex items-center gap-3">
-        {/* System Health Metric Badge */}
-        <div className="hidden sm:flex items-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 px-3 py-1.5 text-[11px] font-medium text-zinc-300">
-          <Cpu className="h-3.5 w-3.5 text-indigo-400" />
-          <span className="text-zinc-400">Render Pipeline:</span>
-          <span className="text-emerald-400 font-bold">READY</span>
+        {/* Status Badge */}
+        <div className="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-[11px] font-medium text-slate-700">
+          <Cpu className="h-3.5 w-3.5 text-slate-500" />
+          <span className="text-slate-500">Pipeline:</span>
+          <span className="text-emerald-600 font-bold">READY</span>
         </div>
 
         {/* Quick Action Button */}
         <Link
           href="/avatar-studio"
-          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-600/20 hover:from-indigo-500 hover:to-emerald-400 transition-all active:scale-[0.98]"
+          className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-all active:scale-[0.98]"
         >
           <Sparkles className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">New AI Video</span>
+          <span className="hidden sm:inline">Buat Video Baru</span>
         </Link>
 
-        {/* User / Workspace Avatar */}
-        <div className="flex items-center gap-2 pl-2 border-l border-zinc-800">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-400 font-bold text-xs">
+        {/* User Avatar */}
+        <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 border border-slate-200 text-slate-800 font-bold text-xs">
             M
           </div>
         </div>

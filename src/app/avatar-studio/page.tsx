@@ -1,13 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import {
   Upload,
   UserCheck,
   ShoppingBag,
   Sparkles,
-  Play,
   Download,
   Loader2,
   Volume2,
@@ -15,8 +13,6 @@ import {
   Check,
   AlertCircle,
   Film,
-  Flame,
-  CheckCircle2,
 } from "lucide-react";
 
 interface NalarkaPrompts {
@@ -52,7 +48,6 @@ export default function AvatarStudioPage() {
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Ensure project is created
   async function ensureProject(): Promise<string> {
     if (projectId) return projectId;
     const res = await fetch("/api/projects", {
@@ -69,7 +64,6 @@ export default function AvatarStudioPage() {
     return data.project.id;
   }
 
-  // Handle Character Face Upload
   async function handleCharUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -101,7 +95,6 @@ export default function AvatarStudioPage() {
     }
   }
 
-  // Handle Product Image Upload
   async function handleProductUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -133,7 +126,6 @@ export default function AvatarStudioPage() {
     }
   }
 
-  // Generate Script using AI
   async function handleGenerateScript() {
     if (!brandName || !productUsp) {
       setErrorMsg("Harap masukkan nama brand dan keunggulan produk terlebih dahulu.");
@@ -164,7 +156,6 @@ export default function AvatarStudioPage() {
     }
   }
 
-  // Trigger Video + Voiceover Generation
   async function handleCreateVideo() {
     if (!charPreview || !productPreview) {
       setErrorMsg("Harap upload Model Char (wajah) dan Model Barang (produk) terlebih dahulu.");
@@ -220,38 +211,38 @@ export default function AvatarStudioPage() {
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Top Banner Header */}
       <div className="mb-8">
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3.5 py-1 text-xs font-semibold text-indigo-400 border border-indigo-500/20 mb-3">
-          <Sparkles className="h-3.5 w-3.5" />
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 border border-slate-200 mb-3">
+          <Sparkles className="h-3.5 w-3.5 text-slate-700" />
           <span>Model Char + Model Barang ➔ Video & Suara VO</span>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           AI UGC Video & Voiceover Creator
         </h1>
-        <p className="mt-1 text-sm text-zinc-400 max-w-2xl">
-          Cukup masukkan **Model Karakter (wajah)** dan **Model Barang (produk)**, AI akan otomatis membuatkan video vertikal 9:16 lengkap dengan narasi suara review dan teks hook viral.
+        <p className="mt-1 text-sm text-slate-600 max-w-2xl leading-relaxed">
+          Unggah **Model Karakter (wajah)** dan **Model Barang (produk)**, sistem akan membuatkan video vertikal 9:16 lengkap dengan narasi suara review bahasa Indonesia dan teks hook.
         </p>
       </div>
 
       {errorMsg && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm font-medium text-red-400">
-          <AlertCircle className="h-5 w-5 shrink-0" />
+        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
           <span>{errorMsg}</span>
         </div>
       )}
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        {/* Left Column: Model Assets & Script Controls (7 Cols) */}
+        {/* Left Column: Form & Asset Uploader (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Step 1: Upload Model Char & Model Barang */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 backdrop-blur-sm space-y-4">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] text-white">1</span>
+          {/* Step 1: Upload Assets */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">1</span>
               <span>Input Model Char & Model Barang</span>
             </h2>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {/* Box 1: Model Char */}
-              <div className="rounded-xl border border-dashed border-indigo-500/40 bg-zinc-950/80 p-4 text-center flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group hover:border-slate-400 hover:bg-slate-100/60 transition-colors">
                 {charPreview ? (
                   <div className="relative h-44 w-full rounded-lg overflow-hidden">
                     <img
@@ -259,19 +250,19 @@ export default function AvatarStudioPage() {
                       alt="Model Karakter"
                       className="h-full w-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[11px] font-semibold text-white bg-black/70 px-2 py-1 rounded">
+                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[11px] font-semibold text-white bg-slate-900/80 px-2 py-1 rounded">
                         Ganti Foto Model
                       </span>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 border border-slate-200 mb-3 shadow-xs">
                       <UserCheck className="h-6 w-6" />
                     </div>
-                    <span className="text-xs font-bold text-zinc-100">Model Char (Wajah / Orang)</span>
-                    <span className="text-[11px] text-zinc-400 mt-1">
+                    <span className="text-xs font-bold text-slate-900">Model Char (Wajah / Orang)</span>
+                    <span className="text-[11px] text-slate-500 mt-1">
                       Foto selfie, kreator, atau model karakter
                     </span>
                   </>
@@ -284,15 +275,15 @@ export default function AvatarStudioPage() {
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
                 {uploadingChar && (
-                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-xs text-indigo-400 gap-1.5">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-xs text-slate-800 gap-1.5 font-semibold">
+                    <Loader2 className="h-4 w-4 animate-spin text-slate-700" />
                     <span>Mengupload...</span>
                   </div>
                 )}
               </div>
 
               {/* Box 2: Model Barang */}
-              <div className="rounded-xl border border-dashed border-emerald-500/40 bg-zinc-950/80 p-4 text-center flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group">
+              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group hover:border-slate-400 hover:bg-slate-100/60 transition-colors">
                 {productPreview ? (
                   <div className="relative h-44 w-full rounded-lg overflow-hidden">
                     <img
@@ -300,20 +291,20 @@ export default function AvatarStudioPage() {
                       alt="Model Barang"
                       className="h-full w-full object-cover"
                     />
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[11px] font-semibold text-white bg-black/70 px-2 py-1 rounded">
+                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[11px] font-semibold text-white bg-slate-900/80 px-2 py-1 rounded">
                         Ganti Foto Barang
                       </span>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 mb-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 border border-slate-200 mb-3 shadow-xs">
                       <ShoppingBag className="h-6 w-6" />
                     </div>
-                    <span className="text-xs font-bold text-zinc-100">Model Barang (Produk Brand)</span>
-                    <span className="text-[11px] text-zinc-400 mt-1">
-                      Foto produk (skincare, baju, tas, botol, dll)
+                    <span className="text-xs font-bold text-slate-900">Model Barang (Produk Brand)</span>
+                    <span className="text-[11px] text-slate-500 mt-1">
+                      Foto produk (skincare, botol, tas, dll)
                     </span>
                   </>
                 )}
@@ -325,8 +316,8 @@ export default function AvatarStudioPage() {
                   className="absolute inset-0 opacity-0 cursor-pointer"
                 />
                 {uploadingProduct && (
-                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center text-xs text-emerald-400 gap-1.5">
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-xs text-slate-800 gap-1.5 font-semibold">
+                    <Loader2 className="h-4 w-4 animate-spin text-slate-700" />
                     <span>Mengupload...</span>
                   </div>
                 )}
@@ -335,15 +326,15 @@ export default function AvatarStudioPage() {
           </div>
 
           {/* Step 2: Brand Information & Script */}
-          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/60 p-6 backdrop-blur-sm space-y-4">
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-600 text-[10px] text-white">2</span>
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">2</span>
               <span>Informasi Produk & Suara Narasi (VO)</span>
             </h2>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nama Brand / Produk
                 </label>
                 <input
@@ -351,18 +342,18 @@ export default function AvatarStudioPage() {
                   placeholder="Contoh: Nivea Care & Protect"
                   value={brandName}
                   onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-zinc-300 mb-1">
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Pilihan Suara Voiceover (VO)
                 </label>
                 <select
                   value={voiceId}
                   onChange={(e) => setVoiceId(e.target.value)}
-                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 focus:border-indigo-500 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-400 focus:outline-none"
                 >
                   <option value="id-ID-ArdiNeural">Indonesia - Ardi (Pria Natural & Berwibawa)</option>
                   <option value="id-ID-GadisNeural">Indonesia - Gadis (Wanita Ramah & Ceria)</option>
@@ -374,16 +365,16 @@ export default function AvatarStudioPage() {
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-zinc-300">
+                <label className="text-xs font-semibold text-slate-700">
                   Keunggulan / USP Produk
                 </label>
                 <button
                   type="button"
                   onClick={handleGenerateScript}
                   disabled={generatingScript || !brandName}
-                  className="flex items-center gap-1.5 text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors disabled:opacity-40"
+                  className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-colors disabled:opacity-40"
                 >
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
                   <span>{generatingScript ? "Menulis Naskah..." : "Buatkan Naskah Otomatis (AI)"}</span>
                 </button>
               </div>
@@ -392,12 +383,12 @@ export default function AvatarStudioPage() {
                 placeholder="Contoh: Kulit cerah tampak sehat dalam 7 hari dengan 95% kemurnian vitamin C"
                 value={productUsp}
                 onChange={(e) => setProductUsp(e.target.value)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-3.5 py-2 text-xs text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-zinc-300 mb-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Naskah yang Akan Dibacakan oleh Suara Voiceover (VO)
               </label>
               <textarea
@@ -405,7 +396,7 @@ export default function AvatarStudioPage() {
                 placeholder="Tuliskan naskah ulasan produk, atau klik 'Buatkan Naskah Otomatis' di atas..."
                 value={scriptText}
                 onChange={(e) => setScriptText(e.target.value)}
-                className="w-full rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-xs text-zinc-100 placeholder-zinc-600 focus:border-indigo-500 focus:outline-none leading-relaxed"
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none leading-relaxed"
               />
             </div>
           </div>
@@ -415,33 +406,33 @@ export default function AvatarStudioPage() {
             type="button"
             onClick={handleCreateVideo}
             disabled={generatingVideo || !charPreview || !productPreview}
-            className="w-full flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-emerald-500 py-4 text-sm font-bold text-white shadow-xl shadow-indigo-600/30 hover:from-indigo-500 hover:to-emerald-400 transition-all active:scale-[0.99] disabled:opacity-50"
+            className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 transition-all active:scale-[0.99] disabled:opacity-40"
           >
             {generatingVideo ? (
               <>
-                <Loader2 className="h-5 w-5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin text-white" />
                 <span>{progressText}</span>
               </>
             ) : (
               <>
-                <Film className="h-5 w-5" />
+                <Film className="h-4 w-4" />
                 <span>Generate Video UGC + Suara VO (9:16)</span>
               </>
             )}
           </button>
 
-          {/* Nalarka / Google Flow & Omni Prompts Accordion */}
+          {/* Nalarka Prompts Section */}
           {generatedPrompts && (
-            <div className="rounded-2xl border border-indigo-500/30 bg-zinc-900/60 p-5 backdrop-blur-sm space-y-4">
-              <div className="flex items-center justify-between pb-2 border-b border-zinc-800">
-                <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
-                  <Sparkles className="h-4 w-4" />
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200">
+                <div className="flex items-center gap-2 text-slate-900 font-bold text-xs uppercase tracking-wider">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
                   <span>Prompt Google Flow / Omni (Metode Nalarka)</span>
                 </div>
-                <span className="text-[11px] text-zinc-500">4 Scene Prompts</span>
+                <span className="text-[11px] text-slate-500">4 Scene Prompts</span>
               </div>
-              <p className="text-xs text-zinc-400">
-                Jika Anda ingin me-render ulang di Google Flow / Omni / Kling / Luma gratis, Anda bisa salin prompt konsisten ini:
+              <p className="text-xs text-slate-600">
+                Salin prompt berikut untuk digunakan langsung di Google Flow / Omni / Kling / Luma gratis:
               </p>
 
               <div className="space-y-3">
@@ -451,18 +442,18 @@ export default function AvatarStudioPage() {
                   { label: "Scene 3: Reaksi & Experience", text: generatedPrompts.scene3, key: "s3" },
                   { label: "Scene 4: Call to Action", text: generatedPrompts.scene4, key: "s4" },
                 ].map((item) => (
-                  <div key={item.key} className="rounded-xl bg-zinc-950 p-3 border border-zinc-800/80 text-xs">
+                  <div key={item.key} className="rounded-xl bg-slate-50 p-3 border border-slate-200 text-xs">
                     <div className="flex items-center justify-between mb-1.5">
-                      <span className="font-bold text-zinc-300">{item.label}</span>
+                      <span className="font-bold text-slate-800">{item.label}</span>
                       <button
                         onClick={() => copyToClipboard(item.text, item.key)}
-                        className="flex items-center gap-1 rounded bg-zinc-800 px-2 py-0.5 text-[10px] text-zinc-300 hover:text-white"
+                        className="flex items-center gap-1 rounded bg-white px-2 py-0.5 text-[10px] font-medium text-slate-700 border border-slate-200 hover:bg-slate-100"
                       >
-                        {copiedPrompt === item.key ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                        {copiedPrompt === item.key ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
                         <span>{copiedPrompt === item.key ? "Tersalin!" : "Salin Prompt"}</span>
                       </button>
                     </div>
-                    <p className="text-[11px] text-zinc-400 leading-relaxed font-mono">{item.text}</p>
+                    <p className="text-[11px] text-slate-600 leading-relaxed font-mono">{item.text}</p>
                   </div>
                 ))}
               </div>
@@ -472,7 +463,7 @@ export default function AvatarStudioPage() {
 
         {/* Right Column: Live 9:16 Video Player Result (5 Cols) */}
         <div className="lg:col-span-5 flex flex-col items-center space-y-4">
-          <div className="relative aspect-vertical-video max-h-[640px] w-full max-w-[340px] overflow-hidden rounded-3xl border-2 border-zinc-800 bg-black shadow-2xl">
+          <div className="relative aspect-vertical-video max-h-[640px] w-full max-w-[340px] overflow-hidden rounded-[36px] border-[6px] border-slate-200 bg-slate-100 shadow-xl ring-1 ring-slate-300/80">
             {generatedVideoUrl ? (
               <video
                 src={generatedVideoUrl}
@@ -483,38 +474,48 @@ export default function AvatarStudioPage() {
                 className="h-full w-full object-cover"
               />
             ) : (
-              <div className="h-full w-full flex flex-col justify-between p-4 relative">
-                {/* Top Hook Preview */}
-                <div className="z-10 flex justify-center pt-2">
-                  <div className="rounded-lg bg-yellow-400 px-3 py-1.5 text-center text-[10px] font-black uppercase text-black shadow-lg">
+              <div className="h-full w-full flex flex-col justify-between p-4 relative bg-slate-50">
+                {/* Smartphone Dynamic Island / Notch */}
+                <div className="flex flex-col items-center gap-2 pt-1">
+                  <div className="h-4 w-24 rounded-full bg-slate-200/80" />
+                  {/* Top Hook Preview */}
+                  <div className="rounded-full bg-slate-900 px-3.5 py-1 text-center text-[10px] font-bold text-white shadow-sm tracking-wide">
                     {hookHeadline}
                   </div>
                 </div>
 
-                {/* Preview Mockup */}
-                <div className="flex-1 flex flex-col justify-center items-center my-4 space-y-2">
-                  <div className="w-full h-full flex flex-col gap-1">
-                    <div className="flex-1 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden">
+                {/* Preview Mockup Canvas */}
+                <div className="flex-1 flex flex-col justify-center items-center my-3 space-y-2">
+                  <div className="w-full h-full flex flex-col gap-2">
+                    {/* Upper: Product */}
+                    <div className="flex-1 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-xs relative">
                       {productPreview ? (
                         <img src={productPreview} alt="Produk" className="h-full w-full object-cover" />
                       ) : (
-                        <span className="text-[10px] text-zinc-500 font-bold">Model Barang (Produk)</span>
+                        <div className="flex flex-col items-center text-center p-2">
+                          <ShoppingBag className="h-5 w-5 text-slate-300 mb-1" />
+                          <span className="text-[10px] text-slate-400 font-semibold">Model Barang (Produk)</span>
+                        </div>
                       )}
                     </div>
-                    <div className="flex-1 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center overflow-hidden">
+                    {/* Lower: Character */}
+                    <div className="flex-1 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-xs relative">
                       {charPreview ? (
                         <img src={charPreview} alt="Model Char" className="h-full w-full object-cover" />
                       ) : (
-                        <span className="text-[10px] text-zinc-500 font-bold">Model Char (Karakter)</span>
+                        <div className="flex flex-col items-center text-center p-2">
+                          <UserCheck className="h-5 w-5 text-slate-300 mb-1" />
+                          <span className="text-[10px] text-slate-400 font-semibold">Model Char (Karakter)</span>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
 
-                {/* Subtitle Caption */}
-                <div className="z-10 rounded-xl bg-black/75 px-3 py-2 text-center backdrop-blur-md border border-white/10">
-                  <p className="text-[10px] font-bold text-white line-clamp-2 leading-relaxed">
-                    &ldquo;{scriptText || "Suara narasi VO akan otomatis disematkan dan diputar di sini..."}&rdquo;
+                {/* Subtitle Caption Overlay */}
+                <div className="z-10 rounded-2xl bg-white/95 px-3.5 py-2.5 text-center backdrop-blur border border-slate-200 shadow-sm">
+                  <p className="text-[10px] font-semibold text-slate-800 line-clamp-2 leading-relaxed">
+                    &ldquo;{scriptText || "Suara narasi VO akan disematkan dan diputar di sini..."}&rdquo;
                   </p>
                 </div>
               </div>
@@ -527,7 +528,7 @@ export default function AvatarStudioPage() {
               <a
                 href={generatedVideoUrl}
                 download="ugc_affiliate_video_1080x1920.mp4"
-                className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 px-6 py-3.5 text-xs font-bold text-white shadow-lg shadow-emerald-500/25 hover:bg-emerald-400 transition-all"
+                className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-all"
               >
                 <Download className="h-4 w-4" />
                 <span>Download Video MP4 1080x1920</span>
@@ -537,7 +538,7 @@ export default function AvatarStudioPage() {
                 <a
                   href={generatedAudioUrl}
                   download="voiceover.mp3"
-                  className="flex items-center justify-center gap-2 rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-2 text-xs font-semibold text-zinc-300 hover:text-white transition-all"
+                  className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-xs"
                 >
                   <Volume2 className="h-3.5 w-3.5" />
                   <span>Download File Audio VO (MP3)</span>
