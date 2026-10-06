@@ -1,0 +1,15 @@
+services:
+  ugc-studio:
+    build: .
+    container_name: ugc-studio
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+    volumes:
+      # Persistent SQLite database storage
+      - ./prisma:/app/prisma
+      # Persistent video uploads and rendered MP4 exports
+      - ./public/uploads:/app/public/uploads

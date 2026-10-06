@@ -1,0 +1,98 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Project {
+  id                 String       @id @default(uuid())
+  title              String
+  brandName          String
+  productDescription String
+  targetAudience     String?
+  tone               String       @default("casual") // casual, energetic, emotional, hard-sell
+  targetDurationSec  Int          @default(30)
+  aspectRatio        String       @default("9:16")
+  status             String       @default("DRAFT") // DRAFT, SCRIPTED, RECORDED, READY_TO_RENDER, RENDERED
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  scripts            Script[]
+  scenes             Scene[]
+  exports            VideoExport[]
+}
+
+model Script {
+  id                String   @id @default(uuid())
+  projectId         String
+  project           Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  hookText          String
+  problemText       String
+  solutionText      String
+  demoText          String
+  ctaText           String
+  fullScript        String
+  hookOptions       String?  // JSON string containing alternative generated hooks
+  selectedHookIndex Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+model Scene {
+  id           String      @id @default(uuid())
+  projectId    String
+  project      Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  orderIndex   Int
+  sceneType    String      // HOOK, PROBLEM, SOLUTION, DEMO, CTA
+  title        String
+  scriptLine   String
+  durationEst  Float       @default(5.0)
+  mediaType    String      @default("CAMERA_TAKE") // CAMERA_TAKE, B_ROLL, AI_TTS
+  activeTakeId String?     // ID of the chosen take
+  overlayText  String?
+  textStyle    String?     // JSON style for text positioning & colors
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  takes        SceneTake[]
+}
+
+model SceneTake {
+  id          String   @id @default(uuid())
+  sceneId     String
+  scene       Scene    @relation(fields: [sceneId], references: [id], onDelete: Cascade)
+  takeNumber  Int
+  filePath    String   // relative path to stored video
+  durationSec Float    @default(0.0)
+  fileSize    Int      @default(0)
+  mimeType    String   @default("video/webm")
+  createdAt   DateTime @default(now())
+}
+
+model VideoExport {
+  id           String    @id @default(uuid())
+  projectId    String
+  project      Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  resolution   String    @default("1080x1920")
+  outputPath   String?
+  fileSize     Int?
+  status       String    @default("PENDING") // PENDING, PROCESSING, COMPLETED, FAILED
+  progress     Int       @default(0)
+  errorMessage String?
+  startedAt    DateTime  @default(now())
+  completedAt  DateTime?
+}
+
+model AppSetting {
+  id                   String   @id @default("global_settings")
+  aiProviderPreference String   @default("gemini") // gemini, openai, offline
+  geminiApiKey         String?
+  openAiApiKey         String?
+  elevenLabsApiKey     String?
+  defaultTtsVoice      String   @default("id-ID-ArdiNeural")
+  adminPin             String?  // Optional PIN for VPS access protection
+  updatedAt            DateTime @updatedAt
+}
