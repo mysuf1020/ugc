@@ -265,6 +265,15 @@ export default function AvatarStudioPage() {
     }
   }
 
+  function handlePreviewFlowVideo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const localUrl = URL.createObjectURL(file);
+    setGeneratedVideoUrl(localUrl);
+    toast.success("Video dari Google Flow berhasil dimuat lengkap dengan audionya!");
+  }
+
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Top Banner Header */}
@@ -640,6 +649,12 @@ export default function AvatarStudioPage() {
                 <span>Download Video MP4 1080x1920</span>
               </a>
             )}
+
+            <label className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-xs cursor-pointer">
+              <Film className="h-3.5 w-3.5 text-slate-600" />
+              <span>Preview Video dari Google Flow (MP4)</span>
+              <input type="file" accept="video/*" onChange={handlePreviewFlowVideo} className="hidden" />
+            </label>
           </div>
         </div>
       </div>
