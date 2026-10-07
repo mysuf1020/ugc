@@ -12,6 +12,8 @@ export async function POST(request: Request) {
       brandName,
       productUsp,
       voiceId = "id-ID-ArdiNeural",
+      targetDurationSec = 15,
+      aspectRatio = "9:16",
     } = body;
 
     if (!projectId || !scriptText) {
@@ -40,6 +42,8 @@ export async function POST(request: Request) {
         scriptText,
         hookHeadline: hookHeadline || "RAHASIA PRODUK INI! 🔥",
         brandName: brandName || project.brandName,
+        targetDurationSec: Number(targetDurationSec) || 15,
+        aspectRatio: aspectRatio || "9:16",
       },
     });
 
@@ -53,6 +57,8 @@ export async function POST(request: Request) {
       scriptText,
       hookHeadline: hookHeadline || "RAHASIA PRODUK INI! 🔥",
       voiceId,
+      targetDurationSec: Number(targetDurationSec) || 15,
+      aspectRatio,
     });
 
     return NextResponse.json({

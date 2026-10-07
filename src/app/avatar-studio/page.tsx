@@ -12,6 +12,11 @@ import {
   Film,
   Play,
   Wand2,
+  Clock,
+  Smartphone,
+  Monitor,
+  Square,
+  Maximize2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -31,6 +36,10 @@ export default function AvatarStudioPage() {
   const [hookHeadline, setHookHeadline] = useState("RAHASIA PRODUK VIRAL INI! 🔥");
   const [voiceId, setVoiceId] = useState("id-ID-ArdiNeural");
   const [generatingScript, setGeneratingScript] = useState(false);
+
+  // Duration & Aspect Ratio Options
+  const [targetDurationSec, setTargetDurationSec] = useState<number>(15);
+  const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
 
   // 1-Click Video Generation State
   const [generatingVideo, setGeneratingVideo] = useState(false);
@@ -54,7 +63,7 @@ export default function AvatarStudioPage() {
   const stages = [
     {
       title: "1. Analisis Model & Penyiapan Naskah",
-      subtitle: "Menyiapkan referensi karakter & formula hook viral",
+      subtitle: "Menyesuaikan durasi naskah dengan tempo bicara",
     },
     {
       title: "2. Sintesis Suara Voiceover (VO)",
@@ -62,11 +71,11 @@ export default function AvatarStudioPage() {
     },
     {
       title: "3. Rendering AI Video Scene Karakter",
-      subtitle: "Karakter dibuatkan adegan memegang & mengulas produk (±1-2 menit)",
+      subtitle: "Karakter memegang & mengulas produk (±1-2 menit)",
     },
     {
-      title: "4. Finalisasi Video 9:16 Siap Pakai",
-      subtitle: "Menyatukan video AI, suara narasi & format TikTok 1080x1920",
+      title: "4. Finalisasi Layout & Durasi Video",
+      subtitle: `Mengompilasi video ${aspectRatio} durasi ${targetDurationSec}s`,
     },
   ];
 
@@ -101,6 +110,8 @@ export default function AvatarStudioPage() {
         title: brandName ? `UGC - ${brandName}` : "UGC Model & Product Project",
         brandName: brandName || "Brand Produk",
         productDescription: productUsp || "Solusi terbaik harian Anda",
+        targetDurationSec,
+        aspectRatio,
       }),
     });
     const data = await res.json();
@@ -191,7 +202,7 @@ export default function AvatarStudioPage() {
         const generatedSpeech = `${s.hookText} ${s.problemText} ${s.solutionText} ${s.ctaText}`.trim();
         setScriptText(generatedSpeech);
         setHookHeadline(s.hookText.slice(0, 36) + "!");
-        toast.success("Naskah ulasan AI berhasil dirumuskan!");
+        toast.success(`Naskah AI (${targetDurationSec} detik) berhasil dirumuskan!`);
       }
     } catch {
       toast.error("Gagal menghasilkan naskah AI.");
@@ -216,7 +227,7 @@ export default function AvatarStudioPage() {
       let activeHook = hookHeadline;
 
       if (!activeScript) {
-        toast.info("Merumuskan naskah ulasan otomatis...");
+        toast.info(`Merumuskan naskah ulasan otomatis (${targetDurationSec}s)...`);
         const sRes = await fetch("/api/ai/script", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -235,7 +246,7 @@ export default function AvatarStudioPage() {
         }
       }
 
-      // Execute full automated video generator
+      // Execute full automated video generator with target duration and aspect ratio
       const res = await fetch("/api/avatar/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -246,6 +257,8 @@ export default function AvatarStudioPage() {
           brandName: brandName || "Produk Pilihan",
           productUsp: productUsp || "Solusi terbaik harian",
           voiceId,
+          targetDurationSec,
+          aspectRatio,
         }),
       });
 
@@ -253,7 +266,7 @@ export default function AvatarStudioPage() {
         const data = await res.json();
         setGeneratedVideoUrl(data.videoUrl);
         setGeneratedAudioUrl(data.audioUrl);
-        toast.success("Video UGC otomatis berhasil dibuat lengkap dengan audio!");
+        toast.success(`Video UGC (${targetDurationSec}s · ${aspectRatio}) berhasil dibuat!`);
       } else {
         const err = await res.json();
         toast.error(err.error || "Gagal membuat video otomatis.");
@@ -273,6 +286,56 @@ export default function AvatarStudioPage() {
     toast.success("Video dari Google Flow berhasil dimuat lengkap dengan audionya!");
   }
 
+  // Duration Options List
+  const durationOptions = [
+    { value: 5, label: "5 Detik", desc: "Hook Cepat" },
+    { value: 10, label: "10 Detik", desc: "Micro Video" },
+    { value: 15, label: "15 Detik", desc: "TikTok / Reels", popular: true },
+    { value: 30, label: "30 Detik", desc: "Ulasan Lengkap" },
+    { value: 60, label: "60 Detik", desc: "Deep Review" },
+  ];
+
+  // Layout / Aspect Ratio Options List
+  const layoutOptions = [
+    {
+      value: "9:16",
+      label: "9:16 Vertikal",
+      sub: "TikTok, Reels, Shorts",
+      res: "1080x1920",
+      icon: Smartphone,
+    },
+    {
+      value: "16:9",
+      label: "16:9 Horizontal",
+      sub: "YouTube, Web Video",
+      res: "1920x1080",
+      icon: Monitor,
+    },
+    {
+      value: "1:1",
+      label: "1:1 Persegi",
+      sub: "Instagram Feed Post",
+      res: "1080x1080",
+      icon: Square,
+    },
+    {
+      value: "4:5",
+      label: "4:5 Potret",
+      sub: "Instagram Feed Potret",
+      res: "1080x1350",
+      icon: Maximize2,
+    },
+  ];
+
+  // Aspect ratio helper for player frame
+  const frameAspectClass =
+    aspectRatio === "9:16"
+      ? "aspect-[9/16] max-w-[340px]"
+      : aspectRatio === "16:9"
+      ? "aspect-[16/9] max-w-[500px]"
+      : aspectRatio === "1:1"
+      ? "aspect-square max-w-[360px]"
+      : "aspect-[4/5] max-w-[350px]";
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -280,18 +343,18 @@ export default function AvatarStudioPage() {
       <div className="mb-6">
         <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-800 border border-slate-200 mb-3">
           <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-          <span>Auto 1-Click UGC Generator: Model Char + Model Barang ➔ Video Langsung Jadi</span>
+          <span>Auto 1-Click UGC Generator: Model Char + Model Barang ➔ Video Otomatis</span>
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          Auto AI UGC Video Generator
+          AI UGC Video Generator
         </h1>
         <p className="mt-1 text-sm text-slate-600 max-w-3xl leading-relaxed">
-          Cukup upload foto model karakter dan foto produk. Sistem akan otomatis membuatkan naskah, suara voiceover (VO) bahasa Indonesia, dan video karakter yang memegang produk secara langsung.
+          Karakter AI beneran memegang & mereview produk secara langsung. Tentukan durasi video dan layout ukuran yang Anda inginkan (9:16, 16:9, 1:1, atau 4:5).
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        {/* Left Column: Form & 1-Click Action (7 Cols) */}
+        {/* Left Column: Form & Settings (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
           {/* Step 1: Upload Assets */}
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
@@ -388,14 +451,89 @@ export default function AvatarStudioPage() {
             </div>
           </div>
 
-          {/* Step 2: Product & Voice Settings */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          {/* Step 2: Product, Voice, Duration & Layout Settings */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
             <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
               <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">2</span>
-              <span>Detail Produk & Pengisi Suara (VO)</span>
+              <span>Format Durasi, Ukuran Layout & Detail Produk</span>
             </h2>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* A. DURATION SELECTOR */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-slate-600" />
+                  <span>Jangka Waktu / Durasi Video</span>
+                </label>
+                <span className="text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {targetDurationSec} Detik
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                {durationOptions.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setTargetDurationSec(opt.value)}
+                    className={`flex flex-col items-center justify-center rounded-xl p-2.5 text-center transition-all border ${
+                      targetDurationSec === opt.value
+                        ? "border-slate-900 bg-slate-900 text-white shadow-xs"
+                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span className="text-xs font-bold">{opt.label}</span>
+                    <span className={`text-[10px] mt-0.5 ${targetDurationSec === opt.value ? "text-slate-300" : "text-slate-500"}`}>
+                      {opt.desc}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* B. ASPECT RATIO / LAYOUT SELECTOR */}
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <Maximize2 className="h-3.5 w-3.5 text-slate-600" />
+                  <span>Layout & Ukuran Resolusi Video</span>
+                </label>
+                <span className="text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">
+                  {aspectRatio}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                {layoutOptions.map((layout) => {
+                  const Icon = layout.icon;
+                  const isSelected = aspectRatio === layout.value;
+                  return (
+                    <button
+                      key={layout.value}
+                      type="button"
+                      onClick={() => setAspectRatio(layout.value as any)}
+                      className={`flex flex-col items-start rounded-xl p-3 text-left transition-all border ${
+                        isSelected
+                          ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900 shadow-2xs"
+                          : "border-slate-200 bg-slate-50/60 hover:bg-slate-100"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-1.5">
+                        <Icon className={`h-4 w-4 ${isSelected ? "text-slate-900" : "text-slate-500"}`} />
+                        <span className="text-[10px] font-mono text-slate-500">{layout.res}</span>
+                      </div>
+                      <span className={`text-xs font-bold ${isSelected ? "text-slate-900" : "text-slate-700"}`}>
+                        {layout.label}
+                      </span>
+                      <span className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
+                        {layout.sub}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* C. PRODUCT & VOICE INFO */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
                   Nama Brand / Produk
@@ -418,7 +556,7 @@ export default function AvatarStudioPage() {
                   onChange={(e) => setVoiceId(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-400 focus:outline-none"
                 >
-                  <option value="id-ID-ArdiNeural">Indonesia - Ardi (Pria Natural & Berwibawa)</option>
+                  <option value="id-ID-ArdiNeural">Indonesia - Ardi (Pria Natural & Mantap)</option>
                   <option value="id-ID-GadisNeural">Indonesia - Gadis (Wanita Ramah & Ceria)</option>
                   <option value="en-US-ChristopherNeural">English - Christopher (Male Casual)</option>
                   <option value="en-US-JennyNeural">English - Jenny (Female Energetic)</option>
@@ -438,7 +576,7 @@ export default function AvatarStudioPage() {
                   className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-colors disabled:opacity-40"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                  <span>{generatingScript ? "Menulis..." : "Buatkan Naskah Otomatis"}</span>
+                  <span>{generatingScript ? "Menulis..." : `Buatkan Naskah Otomatis (${targetDurationSec}s)`}</span>
                 </button>
               </div>
               <input
@@ -475,7 +613,9 @@ export default function AvatarStudioPage() {
                     <span className="relative inline-flex rounded-full h-3 w-3 bg-slate-900"></span>
                   </span>
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900">Sedang Membuat Video UGC Otomatis...</h3>
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Merender Video UGC {aspectRatio} ({targetDurationSec} Detik)...
+                    </h3>
                     <p className="text-[11px] text-slate-500 font-medium">
                       {stages[currentStageIndex]?.subtitle}
                     </p>
@@ -541,7 +681,7 @@ export default function AvatarStudioPage() {
               <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 flex items-center gap-2 text-[11px] text-slate-600">
                 <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
                 <span>
-                  Video AI sedang dibuat dan otomatis digabungkan dengan suara narasi VO bahasa Indonesia. Begitu selesai, video akan langsung diputar di layar kanan.
+                  Video AI sedang dibuat sesuai durasi ({targetDurationSec}s) dan layout ({aspectRatio}). Video akan langsung diputar otomatis begitu selesai.
                 </span>
               </div>
             </div>
@@ -553,14 +693,24 @@ export default function AvatarStudioPage() {
               className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-slate-900 py-4 text-sm font-bold text-white shadow-sm hover:bg-slate-800 transition-all active:scale-[0.99] disabled:opacity-40"
             >
               <Wand2 className="h-4 w-4 text-amber-400" />
-              <span>Buat Video UGC Otomatis (Video Karakter Memegang Produk + Suara VO)</span>
+              <span>
+                Buat Video UGC Otomatis ({targetDurationSec} Detik · Layout {aspectRatio})
+              </span>
             </button>
           )}
         </div>
 
-        {/* Right Column: Live 9:16 Video Player Result (5 Cols) */}
+        {/* Right Column: Live Video Player Result (5 Cols) */}
         <div className="lg:col-span-5 flex flex-col items-center space-y-4">
-          <div className="relative aspect-vertical-video max-h-[640px] w-full max-w-[340px] overflow-hidden rounded-[36px] border-[6px] border-slate-200 bg-slate-100 shadow-xl ring-1 ring-slate-300/80">
+          {/* Format Badge Indicator */}
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-1 rounded-full shadow-2xs">
+            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Format: {aspectRatio}</span>
+            <span>·</span>
+            <span>Durasi: {targetDurationSec}s</span>
+          </div>
+
+          <div className={`relative w-full overflow-hidden rounded-[32px] border-[6px] border-slate-200 bg-slate-100 shadow-xl ring-1 ring-slate-300/80 transition-all duration-300 ${frameAspectClass}`}>
             {generatedVideoUrl ? (
               <video
                 src={generatedVideoUrl}
@@ -574,8 +724,8 @@ export default function AvatarStudioPage() {
               <div className="h-full w-full flex flex-col justify-between p-4 relative bg-slate-50">
                 {/* Smartphone Dynamic Island / Notch */}
                 <div className="flex flex-col items-center gap-2 pt-1">
-                  <div className="h-4 w-24 rounded-full bg-slate-200/80" />
-                  <div className="rounded-full bg-slate-900 px-3.5 py-1 text-center text-[10px] font-bold text-white shadow-sm tracking-wide">
+                  <div className="h-3.5 w-20 rounded-full bg-slate-200/80" />
+                  <div className="rounded-full bg-slate-900 px-3 py-0.5 text-center text-[10px] font-bold text-white shadow-sm tracking-wide">
                     {hookHeadline}
                   </div>
                 </div>
@@ -609,9 +759,9 @@ export default function AvatarStudioPage() {
                 </div>
 
                 {/* Subtitle Caption Overlay */}
-                <div className="z-10 rounded-2xl bg-white/95 px-3.5 py-2.5 text-center backdrop-blur border border-slate-200 shadow-sm">
+                <div className="z-10 rounded-2xl bg-white/95 px-3 py-2 text-center backdrop-blur border border-slate-200 shadow-sm">
                   <p className="text-[10px] font-semibold text-slate-800 line-clamp-2 leading-relaxed">
-                    &ldquo;{scriptText || "Suara narasi VO akan disematkan dan diputar di sini..."}&rdquo;
+                    &ldquo;{scriptText || `Suara narasi VO (${targetDurationSec}s) akan diputar di sini...`}&rdquo;
                   </p>
                 </div>
               </div>
@@ -629,7 +779,7 @@ export default function AvatarStudioPage() {
                   </span>
                   <a
                     href={generatedAudioUrl}
-                    download="voiceover_ugc.mp3"
+                    download={`voiceover_${targetDurationSec}s.mp3`}
                     className="text-[10px] font-bold text-slate-900 hover:underline"
                   >
                     Download MP3
@@ -642,11 +792,11 @@ export default function AvatarStudioPage() {
             {generatedVideoUrl && (
               <a
                 href={generatedVideoUrl}
-                download="ugc_affiliate_video_1080x1920.mp4"
+                download={`ugc_video_${aspectRatio.replace(":", "x")}_${targetDurationSec}s.mp4`}
                 className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-all"
               >
                 <Download className="h-4 w-4" />
-                <span>Download Video MP4 1080x1920</span>
+                <span>Download Video MP4 ({aspectRatio})</span>
               </a>
             )}
 

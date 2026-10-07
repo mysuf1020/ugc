@@ -13,6 +13,18 @@ try {
   }
 } catch {}
 
+export type AspectRatioType = "9:16" | "16:9" | "1:1" | "4:5";
+
+export const ASPECT_RATIO_CONFIG: Record<
+  AspectRatioType,
+  { width: number; height: number; label: string; desc: string; icon: string }
+> = {
+  "9:16": { width: 1080, height: 1920, label: "9:16 Vertikal", desc: "TikTok, Reels, Shorts", icon: "Smartphone" },
+  "16:9": { width: 1920, height: 1080, label: "16:9 Horizontal", desc: "YouTube, Web Video", icon: "Monitor" },
+  "1:1": { width: 1080, height: 1080, label: "1:1 Persegi", desc: "Instagram Feed, Post", icon: "Square" },
+  "4:5": { width: 1080, height: 1350, label: "4:5 Potret", desc: "Instagram Feed Potret", icon: "Maximize2" },
+};
+
 export interface UgcGenerationParams {
   projectId: string;
   charImagePath: string;     // Model Char (Foto wajah/orang)
@@ -22,6 +34,8 @@ export interface UgcGenerationParams {
   scriptText: string;
   hookHeadline: string;
   voiceId?: string;
+  targetDurationSec?: number; // 5, 10, 15, 30, 60
+  aspectRatio?: AspectRatioType;
 }
 
 export interface GeneratedUgcResult {
@@ -299,7 +313,7 @@ async function generateMinimaxVideoScene(
   }
 }
 
-// 3. Render 1080x1920 MP4 Video (Model Char + Model Barang + Audio VO + TikTok Graphics)
+// 3. Render MP4 Video with Dynamic Duration & Aspect Ratio (Model Char + Model Barang + Audio VO)
 export async function generateFullUgcVideo(params: UgcGenerationParams): Promise<GeneratedUgcResult> {
   const {
     projectId,
@@ -310,14 +324,19 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
     scriptText,
     hookHeadline,
     voiceId = "id-ID-ArdiNeural",
+    targetDurationSec = 15,
+    aspectRatio = "9:16",
   } = params;
+
+  const config = ASPECT_RATIO_CONFIG[aspectRatio] || ASPECT_RATIO_CONFIG["9:16"];
+  const { width, height } = config;
 
   const exportDir = path.join(process.cwd(), "public", "uploads", "projects", projectId, "exports");
   if (!fs.existsSync(exportDir)) {
     fs.mkdirSync(exportDir, { recursive: true });
   }
 
-  const outputFileName = `ugc_final_1080x1920_${Date.now()}.mp4`;
+  const outputFileName = `ugc_final_${width}x${height}_${Date.now()}.mp4`;
   const outputPath = path.join(exportDir, outputFileName);
   const publicVideoUrl = `/uploads/projects/${projectId}/exports/${outputFileName}`;
 
@@ -330,6 +349,7 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
 
   // 1. Generate Voiceover Audio (MP3)
   const vo = await generateVoiceoverAudio(projectId, scriptText, voiceId);
+  const totalDuration = Math.max(targetDurationSec, vo.durationSec);
 
   // Check Settings in database
   const settings = await prisma.appSetting.findUnique({
@@ -349,7 +369,7 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
     );
 
     if (minimaxVideoUrl) {
-      console.log("[Pipeline] Minimax video ready, downloading and stitching with Voiceover audio...");
+      console.log(`[Pipeline] Minimax video ready, loop-stitching with VO to reach ${totalDuration}s at ${width}x${height}...`);
       const remoteRes = await fetch(minimaxVideoUrl);
       const arrayBuffer = await remoteRes.arrayBuffer();
       const tempMinimaxClipPath = path.join(exportDir, `temp_minimax_${Date.now()}.mp4`);
@@ -358,14 +378,15 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
       await new Promise<void>((resolve, reject) => {
         ffmpeg()
           .input(tempMinimaxClipPath)
+          .inputOptions(["-stream_loop -1"]) // Seamlessly loop clip to match total duration
           .input(vo.audioPath)
           .outputOptions([
-            "-vf scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1",
+            `-vf scale=${width}:${height}:force_original_aspect_ratio=increase,crop=${width}:${height},setsar=1`,
             "-c:v libx264",
             "-pix_fmt yuv420p",
             "-c:a aac",
             "-b:a 192k",
-            "-shortest",
+            "-t", `${totalDuration}`,
             "-preset fast",
           ])
           .output(outputPath)
@@ -388,13 +409,15 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
           status: "COMPLETED",
           finalVideoUrl: publicVideoUrl,
           talkingVideoUrl: publicVideoUrl,
+          targetDurationSec: totalDuration,
+          aspectRatio,
         },
       });
 
       return {
         videoUrl: publicVideoUrl,
         audioUrl: vo.publicAudioUrl,
-        durationSec: vo.durationSec,
+        durationSec: totalDuration,
         prompts,
       };
     }
@@ -474,7 +497,8 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
   }
 
   // --- BRANCH B: NATIVE LOCAL FFmpeg PIPELINE (Fallback) ---
-  const totalDuration = vo.durationSec;
+  const halfH1 = Math.round(height * 0.52);
+  const halfH2 = height - halfH1;
 
   await new Promise<void>((resolve, reject) => {
     const cmd = ffmpeg();
@@ -483,9 +507,9 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
     cmd.input(vo.audioPath);       // [2:a] Generated Voiceover Audio
 
     const filterGraph = [
-      `color=c=0x0f1117:s=1080x1920:d=${totalDuration}[bg]`,
-      `[1:v]scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080,setsar=1,zoompan=z='min(zoom+0.0006,1.06)':d=${totalDuration * 30}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1080[prod_shot]`,
-      `[0:v]scale=1080:840:force_original_aspect_ratio=increase,crop=1080:840,setsar=1,zoompan=z='min(zoom+0.0005,1.05)':d=${totalDuration * 30}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x840[char_shot]`,
+      `color=c=0x0f1117:s=${width}x${height}:d=${totalDuration}[bg]`,
+      `[1:v]scale=${width}:${halfH1}:force_original_aspect_ratio=increase,crop=${width}:${halfH1},setsar=1,zoompan=z='min(zoom+0.0006,1.06)':d=${totalDuration * 30}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${halfH1}[prod_shot]`,
+      `[0:v]scale=${width}:${halfH2}:force_original_aspect_ratio=increase,crop=${width}:${halfH2},setsar=1,zoompan=z='min(zoom+0.0005,1.05)':d=${totalDuration * 30}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=${width}x${halfH2}[char_shot]`,
       `[prod_shot][char_shot]vstack=inputs=2[stacked]`,
       `[bg][stacked]overlay=x=0:y=0:shortest=1[final_v]`,
     ].join(";");
@@ -500,14 +524,12 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
         "-r 30",
         "-t", `${totalDuration}`,
         "-preset fast",
-        "-shortest",
       ])
       .output(outputPath)
       .on("end", () => resolve())
       .on("error", (err) => reject(err))
       .run();
   });
-
 
   const prompts = generateNalarkaPrompts({
     brandName,
@@ -522,6 +544,8 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
       status: "COMPLETED",
       finalVideoUrl: publicVideoUrl,
       talkingVideoUrl: publicVideoUrl,
+      targetDurationSec: totalDuration,
+      aspectRatio,
     },
   });
 
