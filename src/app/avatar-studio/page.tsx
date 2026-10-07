@@ -49,6 +49,41 @@ export default function AvatarStudioPage() {
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
 
+  // Voice Test Preview
+  const [testingVoice, setTestingVoice] = useState(false);
+
+  async function handleTestVoice() {
+    setTestingVoice(true);
+    try {
+      const sampleText = voiceId.startsWith("en")
+        ? "Hey there! Check out this amazing product, it really works wonders."
+        : voiceId.startsWith("jv")
+        ? "Halo sedherek, monggo dipirsani produk ingkang sae sanget menika."
+        : voiceId.startsWith("su")
+        ? "Sampurasun baraya, ieu produk sae pisan kanggo sadidinten."
+        : "Halo! Produk ini beneran bagus banget dan wajib kalian coba sekarang juga.";
+
+      const res = await fetch("/api/ai/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: sampleText, voiceId }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const audio = new Audio(data.audioUrl);
+        audio.play();
+        toast.success("Memutar sampel suara voiceover...");
+      } else {
+        toast.error("Gagal memuat sampel suara.");
+      }
+    } catch {
+      toast.error("Gagal menguji suara.");
+    } finally {
+      setTestingVoice(false);
+    }
+  }
+
   useEffect(() => {
     let timer: NodeJS.Timeout;
     if (generatingVideo) {
@@ -548,18 +583,63 @@ export default function AvatarStudioPage() {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Pilihan Suara Voiceover (VO)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">
+                    Pilihan Suara Voiceover (VO)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleTestVoice}
+                    disabled={testingVoice}
+                    className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-colors disabled:opacity-40"
+                  >
+                    {testingVoice ? (
+                      <Loader2 className="h-3 w-3 animate-spin text-slate-700" />
+                    ) : (
+                      <Volume2 className="h-3 w-3 text-emerald-600" />
+                    )}
+                    <span>Tes Suara</span>
+                  </button>
+                </div>
                 <select
                   value={voiceId}
                   onChange={(e) => setVoiceId(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-400 focus:outline-none"
                 >
-                  <option value="id-ID-ArdiNeural">Indonesia - Ardi (Pria Natural & Mantap)</option>
-                  <option value="id-ID-GadisNeural">Indonesia - Gadis (Wanita Ramah & Ceria)</option>
-                  <option value="en-US-ChristopherNeural">English - Christopher (Male Casual)</option>
-                  <option value="en-US-JennyNeural">English - Jenny (Female Energetic)</option>
+                  <optgroup label="🇮🇩 Bahasa Indonesia (Utama)">
+                    <option value="id-ID-ArdiNeural">Ardi (Pria Indonesia - Berwibawa & Natural)</option>
+                    <option value="id-ID-GadisNeural">Gadis (Wanita Indonesia - Ramah & Ceria)</option>
+                  </optgroup>
+
+                  <optgroup label="🌐 Multilingual Creator (Bisa Indonesia & English)">
+                    <option value="en-US-AndrewMultilingualNeural">Andrew (Pria - Modern Influencer)</option>
+                    <option value="en-US-AvaMultilingualNeural">Ava (Wanita - Sweet & Expressive)</option>
+                    <option value="en-US-BrianMultilingualNeural">Brian (Pria - Commercial & Dynamic)</option>
+                    <option value="en-US-EmmaMultilingualNeural">Emma (Wanita - Friendly Narrator)</option>
+                  </optgroup>
+
+                  <optgroup label="📍 Bahasa Daerah / Etnik Nusantara">
+                    <option value="jv-ID-DimasNeural">Dimas (Pria Jawa - Aksen Mantap)</option>
+                    <option value="jv-ID-SitiNeural">Siti (Wanita Jawa - Halus & Santun)</option>
+                    <option value="su-ID-JajangNeural">Jajang (Pria Sunda - Ramah & Akrab)</option>
+                    <option value="su-ID-TutiNeural">Tuti (Wanita Sunda - Hangat & Ceria)</option>
+                  </optgroup>
+
+                  <optgroup label="🇺🇸 English (US Creator)">
+                    <option value="en-US-JennyNeural">Jenny (Wanita US - Energetic TikTok UGC)</option>
+                    <option value="en-US-GuyNeural">Guy (Pria US - Casual Reviewer)</option>
+                    <option value="en-US-AriaNeural">Aria (Wanita US - Professional Storyteller)</option>
+                    <option value="en-US-ChristopherNeural">Christopher (Pria US - Deep & Confident)</option>
+                    <option value="en-US-EricNeural">Eric (Pria US - Energetic Young)</option>
+                    <option value="en-US-MichelleNeural">Michelle (Wanita US - Warm & Caring)</option>
+                  </optgroup>
+
+                  <optgroup label="🇬🇧 🇦🇺 🇸🇬 English (Aksen Global)">
+                    <option value="en-GB-RyanNeural">Ryan (Pria UK - British Accent)</option>
+                    <option value="en-GB-SoniaNeural">Sonia (Wanita UK - British Elegance)</option>
+                    <option value="en-AU-NatashaNeural">Natasha (Wanita Australia - Aussie Casual)</option>
+                    <option value="en-SG-LunaNeural">Luna (Wanita Singapore - Southeast Asian)</option>
+                  </optgroup>
                 </select>
               </div>
             </div>
