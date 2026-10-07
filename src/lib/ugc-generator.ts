@@ -227,6 +227,78 @@ async function generateDidTalkingVideo(
   }
 }
 
+// Helper: Call Replicate Minimax Video-01 to generate real AI video of character holding and demonstrating the product
+async function generateMinimaxVideoScene(
+  replicateToken: string,
+  diskCharPath: string,
+  brandName: string,
+  productUsp: string,
+  hookHeadline: string
+): Promise<string | null> {
+  try {
+    const charBuffer = fs.readFileSync(diskCharPath);
+    const charExt = path.extname(diskCharPath).replace(".", "").toLowerCase() || "png";
+    const mime = charExt === "jpg" || charExt === "jpeg" ? "image/jpeg" : "image/png";
+    const charDataUri = `data:${mime};base64,${charBuffer.toString("base64")}`;
+
+    const prompt = `A handsome Indonesian creator holding ${brandName} in hand, looking enthusiastically at camera, showing the product and smiling, ${productUsp}, modern bright room, photorealistic, cinematic vertical 9:16 TikTok UGC video.`;
+
+    console.log("[Minimax Engine] Submitting video generation to Replicate...");
+    const predRes = await fetch("https://api.replicate.com/v1/models/minimax/video-01/predictions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${replicateToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        input: {
+          prompt,
+          subject_reference: charDataUri,
+          prompt_optimizer: true,
+        },
+      }),
+    });
+
+    if (!predRes.ok) {
+      console.warn("[Minimax Engine] Failed to create prediction:", await predRes.text());
+      return null;
+    }
+
+    const predData = await predRes.json();
+    const predId = predData.id;
+    console.log(`[Minimax Engine] Prediction created: ${predId}, waiting for completion...`);
+
+    // Poll for completion (up to 40 attempts x 5s = ~200s)
+    for (let i = 0; i < 40; i++) {
+      await new Promise((r) => setTimeout(r, 5000));
+      const pollRes = await fetch(`https://api.replicate.com/v1/predictions/${predId}`, {
+        headers: { Authorization: `Bearer ${replicateToken}` },
+      });
+
+      if (pollRes.ok) {
+        const pollData = await pollRes.json();
+        console.log(`[Minimax Engine] Polling ${predId} (${i + 1}/40): ${pollData.status}`);
+
+        if (pollData.status === "succeeded" && pollData.output) {
+          console.log("[Minimax Engine] Video generated successfully!", pollData.output);
+          return pollData.output;
+        }
+
+        if (pollData.status === "failed" || pollData.status === "canceled") {
+          console.warn("[Minimax Engine] Prediction ended with status:", pollData.status, pollData.error);
+          return null;
+        }
+      }
+    }
+
+    console.warn(`[Minimax Engine] Polling timed out for prediction ${predId}`);
+    return null;
+  } catch (err) {
+    console.error("[Minimax Engine] Error generating video:", err);
+    return null;
+  }
+}
+
 // 3. Render 1080x1920 MP4 Video (Model Char + Model Barang + Audio VO + TikTok Graphics)
 export async function generateFullUgcVideo(params: UgcGenerationParams): Promise<GeneratedUgcResult> {
   const {
@@ -256,16 +328,84 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
     throw new Error("File foto karakter atau foto produk tidak ditemukan di server.");
   }
 
-  // Check if D-ID AI Video Provider is configured in database
+  // 1. Generate Voiceover Audio (MP3)
+  const vo = await generateVoiceoverAudio(projectId, scriptText, voiceId);
+
+  // Check Settings in database
   const settings = await prisma.appSetting.findUnique({
     where: { id: "global_settings" },
   });
+  const replicateToken = settings?.replicateApiToken || process.env.REPLICATE_API_TOKEN;
   const didKey = settings?.dIdApiKey || process.env.DID_API_KEY;
 
+  // --- BRANCH 1: MINIMAX GENERATIVE VIDEO ENGINE (Char actually holding & using product!) ---
+  if (replicateToken) {
+    const minimaxVideoUrl = await generateMinimaxVideoScene(
+      replicateToken,
+      diskCharPath,
+      brandName,
+      productUsp,
+      hookHeadline
+    );
+
+    if (minimaxVideoUrl) {
+      console.log("[Pipeline] Minimax video ready, downloading and stitching with Voiceover audio...");
+      const remoteRes = await fetch(minimaxVideoUrl);
+      const arrayBuffer = await remoteRes.arrayBuffer();
+      const tempMinimaxClipPath = path.join(exportDir, `temp_minimax_${Date.now()}.mp4`);
+      fs.writeFileSync(tempMinimaxClipPath, Buffer.from(arrayBuffer));
+
+      await new Promise<void>((resolve, reject) => {
+        ffmpeg()
+          .input(tempMinimaxClipPath)
+          .input(vo.audioPath)
+          .outputOptions([
+            "-vf scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,setsar=1",
+            "-c:v libx264",
+            "-pix_fmt yuv420p",
+            "-c:a aac",
+            "-b:a 192k",
+            "-shortest",
+            "-preset fast",
+          ])
+          .output(outputPath)
+          .on("end", () => {
+            try { fs.unlinkSync(tempMinimaxClipPath); } catch {}
+            resolve();
+          })
+          .on("error", (err) => {
+            console.error("FFmpeg Minimax Stitch error:", err);
+            reject(err);
+          })
+          .run();
+      });
+
+      const prompts = generateNalarkaPrompts({ brandName, productUsp, hookHeadline });
+
+      await prisma.project.update({
+        where: { id: projectId },
+        data: {
+          status: "COMPLETED",
+          finalVideoUrl: publicVideoUrl,
+          talkingVideoUrl: publicVideoUrl,
+        },
+      });
+
+      return {
+        videoUrl: publicVideoUrl,
+        audioUrl: vo.publicAudioUrl,
+        durationSec: vo.durationSec,
+        prompts,
+      };
+    }
+  }
+
+  // --- BRANCH 2: D-ID TALKING HEAD (Fallback) ---
   let didVideoRemoteUrl: string | null = null;
   if (didKey) {
     didVideoRemoteUrl = await generateDidTalkingVideo(didKey, diskCharPath, scriptText, voiceId);
   }
+
 
   // --- BRANCH A: D-ID AI TALKING AVATAR GENERATION SUCCESSFUL ---
   if (didVideoRemoteUrl) {
@@ -334,7 +474,6 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
   }
 
   // --- BRANCH B: NATIVE LOCAL FFmpeg PIPELINE (Fallback) ---
-  const vo = await generateVoiceoverAudio(projectId, scriptText, voiceId);
   const totalDuration = vo.durationSec;
 
   await new Promise<void>((resolve, reject) => {
