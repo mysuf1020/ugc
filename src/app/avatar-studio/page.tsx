@@ -165,7 +165,7 @@ export default function AvatarStudioPage() {
     }
 
     setGeneratingVideo(true);
-    setProgressText("Memproses suara Voiceover & merender video 1080x1920...");
+    setProgressText("Sedang merender AI Video (D-ID Engine) & mengompilasi video 9:16...");
 
     try {
       const pId = await ensureProject();

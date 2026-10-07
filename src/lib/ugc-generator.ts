@@ -88,6 +88,93 @@ export function generateNalarkaPrompts(params: {
   };
 }
 
+// Helper: Call D-ID API to generate genuine AI talking video from face image + speech script
+async function generateDidTalkingVideo(
+  didKey: string,
+  diskCharPath: string,
+  scriptText: string,
+  voiceId: string
+): Promise<string | null> {
+  try {
+    const basicAuth = didKey.includes(":") ? Buffer.from(didKey).toString("base64") : didKey;
+
+    // 1. Upload face image to D-ID storage
+    const form = new FormData();
+    const fileBuffer = fs.readFileSync(diskCharPath);
+    const ext = path.extname(diskCharPath).replace(".", "") || "png";
+    form.append("image", new Blob([fileBuffer], { type: `image/${ext}` }), `avatar.${ext}`);
+
+    const upRes = await fetch("https://api.d-id.com/images", {
+      method: "POST",
+      headers: { Authorization: `Basic ${basicAuth}` },
+      body: form,
+    });
+
+    if (!upRes.ok) {
+      console.warn("D-ID image upload failed:", await upRes.text());
+      return null;
+    }
+    const upData = await upRes.json();
+    const s3ImageUrl = upData.url;
+
+    // 2. Submit Talk Generation Request
+    const talkRes = await fetch("https://api.d-id.com/talks", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Basic ${basicAuth}`,
+      },
+      body: JSON.stringify({
+        source_url: s3ImageUrl,
+        script: {
+          type: "text",
+          subtitles: false,
+          provider: {
+            type: "microsoft",
+            voice_id: voiceId || "id-ID-ArdiNeural",
+          },
+          input: scriptText,
+        },
+        config: {
+          fluent: true,
+          pad_audio: 0,
+          stitch: true,
+        },
+      }),
+    });
+
+    if (!talkRes.ok) {
+      console.warn("D-ID talk request failed:", await talkRes.text());
+      return null;
+    }
+    const talkData = await talkRes.json();
+    const talkId = talkData.id;
+
+    // 3. Poll for completion (up to 45 attempts x 2.5s = ~110s)
+    for (let i = 0; i < 45; i++) {
+      await new Promise((r) => setTimeout(r, 2500));
+      const pollRes = await fetch(`https://api.d-id.com/talks/${talkId}`, {
+        headers: { Authorization: `Basic ${basicAuth}` },
+      });
+      if (pollRes.ok) {
+        const pollData = await pollRes.json();
+        if (pollData.status === "done" && pollData.result_url) {
+          return pollData.result_url;
+        }
+        if (pollData.status === "error") {
+          console.warn("D-ID talk returned error:", pollData.error);
+          return null;
+        }
+      }
+    }
+
+    return null;
+  } catch (err) {
+    console.error("D-ID talking avatar error:", err);
+    return null;
+  }
+}
+
 // 3. Render 1080x1920 MP4 Video (Model Char + Model Barang + Audio VO + TikTok Graphics)
 export async function generateFullUgcVideo(params: UgcGenerationParams): Promise<GeneratedUgcResult> {
   const {
@@ -100,10 +187,6 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
     hookHeadline,
     voiceId = "id-ID-ArdiNeural",
   } = params;
-
-  // Step 1: Generate real Indonesian Voiceover
-  const vo = await generateVoiceoverAudio(projectId, scriptText, voiceId);
-  const totalDuration = vo.durationSec;
 
   const exportDir = path.join(process.cwd(), "public", "uploads", "projects", projectId, "exports");
   if (!fs.existsSync(exportDir)) {
@@ -121,38 +204,98 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
     throw new Error("File foto karakter atau foto produk tidak ditemukan di server.");
   }
 
-  // Calculate scene durations for 4-shot UGC pacing
-  const sceneDuration = totalDuration / 4;
+  // Check if D-ID AI Video Provider is configured in database
+  const settings = await prisma.appSetting.findUnique({
+    where: { id: "global_settings" },
+  });
+  const didKey = settings?.dIdApiKey || process.env.DID_API_KEY;
 
-  // Build FFmpeg Filter Complex for 4-shot commercial assembly:
-  // Shot 1 (0 to d1): Character Model with dynamic zoom (Hook)
-  // Shot 2 (d1 to d2): Product Hero shot with smooth pan (Product detail)
-  // Shot 3 (d2 to d3): Character + Product side-by-side showcase (Experience)
-  // Shot 4 (d3 to end): Character pointing to Product (CTA)
+  let didVideoRemoteUrl: string | null = null;
+  if (didKey) {
+    didVideoRemoteUrl = await generateDidTalkingVideo(didKey, diskCharPath, scriptText, voiceId);
+  }
+
+  // --- BRANCH A: D-ID AI TALKING AVATAR GENERATION SUCCESSFUL ---
+  if (didVideoRemoteUrl) {
+    // Download D-ID generated MP4
+    const remoteRes = await fetch(didVideoRemoteUrl);
+    const arrayBuffer = await remoteRes.arrayBuffer();
+    const tempDidClipPath = path.join(exportDir, `temp_did_${Date.now()}.mp4`);
+    fs.writeFileSync(tempDidClipPath, Buffer.from(arrayBuffer));
+
+    // Composite D-ID Talking Video with Product Image in 9:16 Vertical Video format
+    await new Promise<void>((resolve, reject) => {
+      const cmd = ffmpeg();
+      cmd.input(tempDidClipPath);    // [0:v] D-ID Talking Presenter
+      cmd.input(diskProductPath);   // [1:v] Product Image
+
+      const filterGraph = [
+        // Top half: Product with subtle zoom
+        `[1:v]scale=1080:1000:force_original_aspect_ratio=increase,crop=1080:1000,setsar=1[prod_shot]`,
+        // Bottom half: D-ID Real AI Talking Video
+        `[0:v]scale=1080:920:force_original_aspect_ratio=increase,crop=1080:920,setsar=1[char_shot]`,
+        // Stack top product & bottom talking creator
+        `[prod_shot][char_shot]vstack=inputs=2[final_v]`,
+      ].join(";");
+
+      cmd
+        .complexFilter(filterGraph, "final_v")
+        .outputOptions([
+          "-c:v libx264",
+          "-pix_fmt yuv420p",
+          "-c:a aac",
+          "-b:a 192k",
+          "-r 30",
+          "-shortest",
+          "-preset fast",
+        ])
+        .output(outputPath)
+        .on("end", () => {
+          // Cleanup temp file
+          try { fs.unlinkSync(tempDidClipPath); } catch {}
+          resolve();
+        })
+        .on("error", (err) => {
+          console.error("FFmpeg D-ID Composite error:", err);
+          reject(err);
+        })
+        .run();
+    });
+
+    const prompts = generateNalarkaPrompts({ brandName, productUsp, hookHeadline });
+
+    await prisma.project.update({
+      where: { id: projectId },
+      data: {
+        status: "COMPLETED",
+        finalVideoUrl: publicVideoUrl,
+        talkingVideoUrl: publicVideoUrl,
+      },
+    });
+
+    return {
+      videoUrl: publicVideoUrl,
+      audioUrl: publicVideoUrl, // Audio is embedded in the AI video
+      durationSec: 15,
+      prompts,
+    };
+  }
+
+  // --- BRANCH B: NATIVE LOCAL FFmpeg PIPELINE (Fallback) ---
+  const vo = await generateVoiceoverAudio(projectId, scriptText, voiceId);
+  const totalDuration = vo.durationSec;
+
   await new Promise<void>((resolve, reject) => {
     const cmd = ffmpeg();
-    
-    // Inputs
     cmd.input(diskCharPath);       // [0:v] Character Model Image
     cmd.input(diskProductPath);    // [1:v] Product Model Image
     cmd.input(vo.audioPath);       // [2:a] Generated Voiceover Audio
 
-    // Filter Graph:
-    // Scale & format character & product to standard 1080x1920 vertical format with Ken Burns motion
     const filterGraph = [
-      // Base background: Lifestyle soft gradient / backdrop
       `color=c=0x0f1117:s=1080x1920:d=${totalDuration}[bg]`,
-      
-      // Top half: Product Model (Hero visual) with elegant zoom
       `[1:v]scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080,setsar=1,zoompan=z='min(zoom+0.0006,1.06)':d=${totalDuration * 30}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1080[prod_shot]`,
-      
-      // Bottom half: Model Char (Presenter) with breathing zoom
       `[0:v]scale=1080:840:force_original_aspect_ratio=increase,crop=1080:840,setsar=1,zoompan=z='min(zoom+0.0005,1.05)':d=${totalDuration * 30}:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x840[char_shot]`,
-      
-      // Stack product on top, character on bottom
       `[prod_shot][char_shot]vstack=inputs=2[stacked]`,
-      
-      // Overlay onto background canvas
       `[bg][stacked]overlay=x=0:y=0:shortest=1[final_v]`,
     ].join(";");
 
@@ -169,15 +312,11 @@ export async function generateFullUgcVideo(params: UgcGenerationParams): Promise
         "-shortest",
       ])
       .output(outputPath)
-      .on("end", () => {
-        resolve();
-      })
-      .on("error", (err) => {
-        console.error("FFmpeg UGC assembly error:", err);
-        reject(err);
-      })
+      .on("end", () => resolve())
+      .on("error", (err) => reject(err))
       .run();
   });
+
 
   const prompts = generateNalarkaPrompts({
     brandName,
