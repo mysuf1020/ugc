@@ -1,24 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  UserCheck,
-  ShoppingBag,
-  Sparkles,
-  Download,
-  Loader2,
-  Volume2,
-  Check,
-  Film,
-  Play,
-  Wand2,
-  Clock,
-  Smartphone,
-  Monitor,
-  Square,
-  Maximize2,
-} from "lucide-react";
+import { Sparkles, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { AssetUploader } from "@/components/avatar-studio/AssetUploader";
+import {
+  FormatAndProductConfig,
+  AspectRatioType,
+} from "@/components/avatar-studio/FormatAndProductConfig";
+import { GenerationProgress } from "@/components/avatar-studio/GenerationProgress";
+import { VideoPlayerMockup } from "@/components/avatar-studio/VideoPlayerMockup";
 
 export default function AvatarStudioPage() {
   const [projectId, setProjectId] = useState<string | null>(null);
@@ -39,7 +30,7 @@ export default function AvatarStudioPage() {
 
   // Duration & Aspect Ratio Options
   const [targetDurationSec, setTargetDurationSec] = useState<number>(15);
-  const [aspectRatio, setAspectRatio] = useState<"9:16" | "16:9" | "1:1" | "4:5">("9:16");
+  const [aspectRatio, setAspectRatio] = useState<AspectRatioType>("9:16");
 
   // 1-Click Video Generation State
   const [generatingVideo, setGeneratingVideo] = useState(false);
@@ -48,41 +39,6 @@ export default function AvatarStudioPage() {
   // Results
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
-
-  // Voice Test Preview
-  const [testingVoice, setTestingVoice] = useState(false);
-
-  async function handleTestVoice() {
-    setTestingVoice(true);
-    try {
-      const sampleText = voiceId.startsWith("en")
-        ? "Hey there! Check out this amazing product, it really works wonders."
-        : voiceId.startsWith("jv")
-        ? "Halo sedherek, monggo dipirsani produk ingkang sae sanget menika."
-        : voiceId.startsWith("su")
-        ? "Sampurasun baraya, ieu produk sae pisan kanggo sadidinten."
-        : "Halo! Produk ini beneran bagus banget dan wajib kalian coba sekarang juga.";
-
-      const res = await fetch("/api/ai/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sampleText, voiceId }),
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        const audio = new Audio(data.audioUrl);
-        audio.play();
-        toast.success("Memutar sampel suara voiceover...");
-      } else {
-        toast.error("Gagal memuat sampel suara.");
-      }
-    } catch {
-      toast.error("Gagal menguji suara.");
-    } finally {
-      setTestingVoice(false);
-    }
-  }
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -94,47 +50,6 @@ export default function AvatarStudioPage() {
     }
     return () => clearInterval(timer);
   }, [generatingVideo]);
-
-  const stages = [
-    {
-      title: "1. Analisis Model & Penyiapan Naskah",
-      subtitle: "Menyesuaikan durasi naskah dengan tempo bicara",
-    },
-    {
-      title: "2. Sintesis Suara Voiceover (VO)",
-      subtitle: "Membuat narasi suara natural bahasa Indonesia",
-    },
-    {
-      title: "3. Rendering AI Video Scene Karakter",
-      subtitle: "Karakter memegang & mengulas produk (±1-2 menit)",
-    },
-    {
-      title: "4. Finalisasi Layout & Durasi Video",
-      subtitle: `Mengompilasi video ${aspectRatio} durasi ${targetDurationSec}s`,
-    },
-  ];
-
-  let currentStageIndex = 0;
-  if (elapsedSeconds >= 90) currentStageIndex = 3;
-  else if (elapsedSeconds >= 15) currentStageIndex = 2;
-  else if (elapsedSeconds >= 5) currentStageIndex = 1;
-
-  let progressPercent = 5;
-  if (elapsedSeconds < 5) {
-    progressPercent = 5 + Math.round((elapsedSeconds / 5) * 15);
-  } else if (elapsedSeconds < 15) {
-    progressPercent = 20 + Math.round(((elapsedSeconds - 5) / 10) * 15);
-  } else if (elapsedSeconds < 110) {
-    progressPercent = 35 + Math.round(((elapsedSeconds - 15) / 95) * 55);
-  } else {
-    progressPercent = Math.min(98, 90 + Math.round(((elapsedSeconds - 110) / 30) * 8));
-  }
-
-  function formatTime(sec: number) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
-  }
 
   async function ensureProject(): Promise<string> {
     if (projectId) return projectId;
@@ -234,10 +149,10 @@ export default function AvatarStudioPage() {
       if (res.ok) {
         const data = await res.json();
         const s = data.script;
-        const generatedSpeech = `${s.hookText} ${s.problemText} ${s.solutionText} ${s.ctaText}`.trim();
-        setScriptText(generatedSpeech);
+        const speech = `${s.hookText} ${s.problemText} ${s.solutionText} ${s.ctaText}`.trim();
+        setScriptText(speech);
         setHookHeadline(s.hookText.slice(0, 36) + "!");
-        toast.success(`Naskah AI (${targetDurationSec} detik) berhasil dirumuskan!`);
+        toast.success(`Naskah AI (${targetDurationSec}s) berhasil dirumuskan!`);
       }
     } catch {
       toast.error("Gagal menghasilkan naskah AI.");
@@ -246,18 +161,15 @@ export default function AvatarStudioPage() {
     }
   }
 
-  // --- 1-CLICK AUTO VIDEO GENERATOR ---
   async function handleAutoGenerateUgc() {
     if (!charPreview || !productPreview) {
-      toast.error("Harap upload Model Char (karakter) dan Model Barang (produk) terlebih dahulu.");
+      toast.error("Harap upload Model Char dan Model Barang terlebih dahulu.");
       return;
     }
 
     setGeneratingVideo(true);
     try {
       const pId = await ensureProject();
-
-      // If script is empty, auto-generate script on the fly
       let activeScript = scriptText.trim();
       let activeHook = hookHeadline;
 
@@ -276,12 +188,11 @@ export default function AvatarStudioPage() {
           setScriptText(activeScript);
           setHookHeadline(activeHook);
         } else {
-          activeScript = `Kalian wajib tahu produk ini! ${brandName || "Produk ini"} beneran ampuh banget buat ${productUsp || "kebutuhan harian"}. Langsung klik keranjang kuning sekarang juga!`;
+          activeScript = `Kalian wajib tahu produk ini! ${brandName || "Produk ini"} beneran ampuh banget. Langsung klik keranjang kuning!`;
           setScriptText(activeScript);
         }
       }
 
-      // Execute full automated video generator with target duration and aspect ratio
       const res = await fetch("/api/avatar/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -321,57 +232,6 @@ export default function AvatarStudioPage() {
     toast.success("Video dari Google Flow berhasil dimuat lengkap dengan audionya!");
   }
 
-  // Duration Options List
-  const durationOptions = [
-    { value: 5, label: "5 Detik", desc: "Hook Cepat" },
-    { value: 10, label: "10 Detik", desc: "Micro Video" },
-    { value: 15, label: "15 Detik", desc: "TikTok / Reels", popular: true },
-    { value: 30, label: "30 Detik", desc: "Ulasan Lengkap" },
-    { value: 60, label: "60 Detik", desc: "Deep Review" },
-  ];
-
-  // Layout / Aspect Ratio Options List
-  const layoutOptions = [
-    {
-      value: "9:16",
-      label: "9:16 Vertikal",
-      sub: "TikTok, Reels, Shorts",
-      res: "1080x1920",
-      icon: Smartphone,
-    },
-    {
-      value: "16:9",
-      label: "16:9 Horizontal",
-      sub: "YouTube, Web Video",
-      res: "1920x1080",
-      icon: Monitor,
-    },
-    {
-      value: "1:1",
-      label: "1:1 Persegi",
-      sub: "Instagram Feed Post",
-      res: "1080x1080",
-      icon: Square,
-    },
-    {
-      value: "4:5",
-      label: "4:5 Potret",
-      sub: "Instagram Feed Potret",
-      res: "1080x1350",
-      icon: Maximize2,
-    },
-  ];
-
-  // Aspect ratio helper for player frame
-  const frameAspectClass =
-    aspectRatio === "9:16"
-      ? "aspect-[9/16] max-w-[340px]"
-      : aspectRatio === "16:9"
-      ? "aspect-[16/9] max-w-[500px]"
-      : aspectRatio === "1:1"
-      ? "aspect-square max-w-[360px]"
-      : "aspect-[4/5] max-w-[350px]";
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Top Banner Header */}
@@ -391,380 +251,38 @@ export default function AvatarStudioPage() {
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* Left Column: Form & Settings (7 Cols) */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Step 1: Upload Assets */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">1</span>
-                <span>Upload Model Karakter & Produk</span>
-              </h2>
-              <span className="text-[11px] text-slate-500">2 Foto Aset Utama</span>
-            </div>
+          <AssetUploader
+            charPreview={charPreview}
+            productPreview={productPreview}
+            uploadingChar={uploadingChar}
+            uploadingProduct={uploadingProduct}
+            onCharUpload={handleCharUpload}
+            onProductUpload={handleProductUpload}
+          />
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {/* Box 1: Model Char */}
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group hover:border-slate-400 hover:bg-slate-100/60 transition-colors">
-                {charPreview ? (
-                  <div className="relative h-44 w-full rounded-lg overflow-hidden flex flex-col justify-between">
-                    <img
-                      src={charPreview}
-                      alt="Model Karakter"
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[11px] font-semibold text-white bg-slate-900/80 px-2 py-1 rounded">
-                        Ganti Foto Model
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 border border-slate-200 mb-3 shadow-xs">
-                      <UserCheck className="h-6 w-6" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-900">Model Char (Wajah / Kreator)</span>
-                    <span className="text-[11px] text-slate-500 mt-1">
-                      Foto selfie atau model karakter Anda
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleCharUpload}
-                  disabled={uploadingChar}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                {uploadingChar && (
-                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-xs text-slate-800 gap-1.5 font-semibold">
-                    <Loader2 className="h-4 w-4 animate-spin text-slate-700" />
-                    <span>Mengupload...</span>
-                  </div>
-                )}
-              </div>
+          <FormatAndProductConfig
+            targetDurationSec={targetDurationSec}
+            setTargetDurationSec={setTargetDurationSec}
+            aspectRatio={aspectRatio}
+            setAspectRatio={setAspectRatio}
+            brandName={brandName}
+            setBrandName={setBrandName}
+            productUsp={productUsp}
+            setProductUsp={setProductUsp}
+            scriptText={scriptText}
+            setScriptText={setScriptText}
+            voiceId={voiceId}
+            setVoiceId={setVoiceId}
+            generatingScript={generatingScript}
+            onGenerateScript={handleGenerateScript}
+          />
 
-              {/* Box 2: Model Barang */}
-              <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center flex flex-col items-center justify-center min-h-[220px] relative overflow-hidden group hover:border-slate-400 hover:bg-slate-100/60 transition-colors">
-                {productPreview ? (
-                  <div className="relative h-44 w-full rounded-lg overflow-hidden flex flex-col justify-between">
-                    <img
-                      src={productPreview}
-                      alt="Model Barang"
-                      className="h-full w-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[11px] font-semibold text-white bg-slate-900/80 px-2 py-1 rounded">
-                        Ganti Foto Barang
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-slate-700 border border-slate-200 mb-3 shadow-xs">
-                      <ShoppingBag className="h-6 w-6" />
-                    </div>
-                    <span className="text-xs font-bold text-slate-900">Model Barang (Foto Produk)</span>
-                    <span className="text-[11px] text-slate-500 mt-1">
-                      Foto produk affiliate / brand
-                    </span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleProductUpload}
-                  disabled={uploadingProduct}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-                {uploadingProduct && (
-                  <div className="absolute inset-0 bg-white/80 flex items-center justify-center text-xs text-slate-800 gap-1.5 font-semibold">
-                    <Loader2 className="h-4 w-4 animate-spin text-slate-700" />
-                    <span>Mengupload...</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Step 2: Product, Voice, Duration & Layout Settings */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-5">
-            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wider flex items-center gap-2">
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] text-white">2</span>
-              <span>Format Durasi, Ukuran Layout & Detail Produk</span>
-            </h2>
-
-            {/* A. DURATION SELECTOR */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-slate-600" />
-                  <span>Jangka Waktu / Durasi Video</span>
-                </label>
-                <span className="text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {targetDurationSec} Detik
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-                {durationOptions.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setTargetDurationSec(opt.value)}
-                    className={`flex flex-col items-center justify-center rounded-xl p-2.5 text-center transition-all border ${
-                      targetDurationSec === opt.value
-                        ? "border-slate-900 bg-slate-900 text-white shadow-xs"
-                        : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                    }`}
-                  >
-                    <span className="text-xs font-bold">{opt.label}</span>
-                    <span className={`text-[10px] mt-0.5 ${targetDurationSec === opt.value ? "text-slate-300" : "text-slate-500"}`}>
-                      {opt.desc}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* B. ASPECT RATIO / LAYOUT SELECTOR */}
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                  <Maximize2 className="h-3.5 w-3.5 text-slate-600" />
-                  <span>Layout & Ukuran Resolusi Video</span>
-                </label>
-                <span className="text-[11px] font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded-full">
-                  {aspectRatio}
-                </span>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                {layoutOptions.map((layout) => {
-                  const Icon = layout.icon;
-                  const isSelected = aspectRatio === layout.value;
-                  return (
-                    <button
-                      key={layout.value}
-                      type="button"
-                      onClick={() => setAspectRatio(layout.value as any)}
-                      className={`flex flex-col items-start rounded-xl p-3 text-left transition-all border ${
-                        isSelected
-                          ? "border-slate-900 bg-slate-50 ring-1 ring-slate-900 shadow-2xs"
-                          : "border-slate-200 bg-slate-50/60 hover:bg-slate-100"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1.5">
-                        <Icon className={`h-4 w-4 ${isSelected ? "text-slate-900" : "text-slate-500"}`} />
-                        <span className="text-[10px] font-mono text-slate-500">{layout.res}</span>
-                      </div>
-                      <span className={`text-xs font-bold ${isSelected ? "text-slate-900" : "text-slate-700"}`}>
-                        {layout.label}
-                      </span>
-                      <span className="text-[10px] text-slate-500 line-clamp-1 mt-0.5">
-                        {layout.sub}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* C. PRODUCT & VOICE INFO */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 pt-2 border-t border-slate-100">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nama Brand / Produk
-                </label>
-                <input
-                  type="text"
-                  placeholder="Contoh: Nivea Care & Protect"
-                  value={brandName}
-                  onChange={(e) => setBrandName(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-semibold text-slate-700">
-                    Pilihan Suara Voiceover (VO)
-                  </label>
-                  <button
-                    type="button"
-                    onClick={handleTestVoice}
-                    disabled={testingVoice}
-                    className="flex items-center gap-1 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-colors disabled:opacity-40"
-                  >
-                    {testingVoice ? (
-                      <Loader2 className="h-3 w-3 animate-spin text-slate-700" />
-                    ) : (
-                      <Volume2 className="h-3 w-3 text-emerald-600" />
-                    )}
-                    <span>Tes Suara</span>
-                  </button>
-                </div>
-                <select
-                  value={voiceId}
-                  onChange={(e) => setVoiceId(e.target.value)}
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 focus:bg-white focus:border-slate-400 focus:outline-none"
-                >
-                  <optgroup label="🇮🇩 Bahasa Indonesia (Utama)">
-                    <option value="id-ID-ArdiNeural">Ardi (Pria Indonesia - Berwibawa & Natural)</option>
-                    <option value="id-ID-GadisNeural">Gadis (Wanita Indonesia - Ramah & Ceria)</option>
-                  </optgroup>
-
-                  <optgroup label="🌐 Multilingual Creator (Bisa Indonesia & English)">
-                    <option value="en-US-AndrewMultilingualNeural">Andrew (Pria - Modern Influencer)</option>
-                    <option value="en-US-AvaMultilingualNeural">Ava (Wanita - Sweet & Expressive)</option>
-                    <option value="en-US-BrianMultilingualNeural">Brian (Pria - Commercial & Dynamic)</option>
-                    <option value="en-US-EmmaMultilingualNeural">Emma (Wanita - Friendly Narrator)</option>
-                  </optgroup>
-
-                  <optgroup label="📍 Bahasa Daerah / Etnik Nusantara">
-                    <option value="jv-ID-DimasNeural">Dimas (Pria Jawa - Aksen Mantap)</option>
-                    <option value="jv-ID-SitiNeural">Siti (Wanita Jawa - Halus & Santun)</option>
-                    <option value="su-ID-JajangNeural">Jajang (Pria Sunda - Ramah & Akrab)</option>
-                    <option value="su-ID-TutiNeural">Tuti (Wanita Sunda - Hangat & Ceria)</option>
-                  </optgroup>
-
-                  <optgroup label="🇺🇸 English (US Creator)">
-                    <option value="en-US-JennyNeural">Jenny (Wanita US - Energetic TikTok UGC)</option>
-                    <option value="en-US-GuyNeural">Guy (Pria US - Casual Reviewer)</option>
-                    <option value="en-US-AriaNeural">Aria (Wanita US - Professional Storyteller)</option>
-                    <option value="en-US-ChristopherNeural">Christopher (Pria US - Deep & Confident)</option>
-                    <option value="en-US-EricNeural">Eric (Pria US - Energetic Young)</option>
-                    <option value="en-US-MichelleNeural">Michelle (Wanita US - Warm & Caring)</option>
-                  </optgroup>
-
-                  <optgroup label="🇬🇧 🇦🇺 🇸🇬 English (Aksen Global)">
-                    <option value="en-GB-RyanNeural">Ryan (Pria UK - British Accent)</option>
-                    <option value="en-GB-SoniaNeural">Sonia (Wanita UK - British Elegance)</option>
-                    <option value="en-AU-NatashaNeural">Natasha (Wanita Australia - Aussie Casual)</option>
-                    <option value="en-SG-LunaNeural">Luna (Wanita Singapore - Southeast Asian)</option>
-                  </optgroup>
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xs font-semibold text-slate-700">
-                  Keunggulan / USP Produk
-                </label>
-                <button
-                  type="button"
-                  onClick={handleGenerateScript}
-                  disabled={generatingScript || !brandName}
-                  className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-700 hover:text-slate-900 transition-colors disabled:opacity-40"
-                >
-                  <Sparkles className="h-3.5 w-3.5 text-amber-500" />
-                  <span>{generatingScript ? "Menulis..." : `Buatkan Naskah Otomatis (${targetDurationSec}s)`}</span>
-                </button>
-              </div>
-              <input
-                type="text"
-                placeholder="Contoh: Kulit cerah tampak sehat dalam 7 hari dengan SPF 15 & 8 superfood"
-                value={productUsp}
-                onChange={(e) => setProductUsp(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Naskah Narasi VO (Bisa Dikosongkan, AI Akan Membuatkan Otomatis)
-              </label>
-              <textarea
-                rows={3}
-                placeholder="Dapat dikosongkan agar AI membuatkan secara otomatis saat tombol di bawah diklik..."
-                value={scriptText}
-                onChange={(e) => setScriptText(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-900 placeholder-slate-400 focus:bg-white focus:border-slate-400 focus:outline-none leading-relaxed"
-              />
-            </div>
-          </div>
-
-          {/* MAIN 1-CLICK ACTION & REALTIME PROGRESS MONITOR */}
           {generatingVideo ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-              {/* Header with Live Status & Timer */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-slate-900"></span>
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Merender Video UGC {aspectRatio} ({targetDurationSec} Detik)...
-                    </h3>
-                    <p className="text-[11px] text-slate-500 font-medium">
-                      {stages[currentStageIndex]?.subtitle}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-mono font-bold text-slate-700 border border-slate-200">
-                    ⏱ {formatTime(elapsedSeconds)}
-                  </span>
-                  <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-mono font-bold text-white shadow-xs">
-                    {progressPercent}%
-                  </span>
-                </div>
-              </div>
-
-              {/* Smooth Progress Bar */}
-              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
-                <div
-                  className="bg-slate-900 h-2.5 rounded-full transition-all duration-700 ease-out"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-
-              {/* 4-Step Checklist */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                {stages.map((stg, idx) => {
-                  const isDone = currentStageIndex > idx;
-                  const isCurrent = currentStageIndex === idx;
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex items-start gap-2.5 rounded-xl border p-2.5 transition-all ${
-                        isCurrent
-                          ? "border-slate-900 bg-slate-50 shadow-xs ring-1 ring-slate-900"
-                          : isDone
-                          ? "border-slate-200 bg-white text-slate-600"
-                          : "border-slate-100 bg-slate-50/50 opacity-60 text-slate-400"
-                      }`}
-                    >
-                      <div className="mt-0.5">
-                        {isDone ? (
-                          <Check className="h-4 w-4 text-emerald-600" />
-                        ) : isCurrent ? (
-                          <Loader2 className="h-4 w-4 animate-spin text-slate-900" />
-                        ) : (
-                          <div className="h-4 w-4 rounded-full border border-slate-300" />
-                        )}
-                      </div>
-                      <div>
-                        <span className={`text-xs font-bold block ${isCurrent ? "text-slate-900" : isDone ? "text-slate-800" : "text-slate-400"}`}>
-                          {stg.title}
-                        </span>
-                        <span className="text-[10px] text-slate-500 leading-tight block mt-0.5">
-                          {stg.subtitle}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 flex items-center gap-2 text-[11px] text-slate-600">
-                <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
-                <span>
-                  Video AI sedang dibuat sesuai durasi ({targetDurationSec}s) dan layout ({aspectRatio}). Video akan langsung diputar otomatis begitu selesai.
-                </span>
-              </div>
-            </div>
+            <GenerationProgress
+              elapsedSeconds={elapsedSeconds}
+              targetDurationSec={targetDurationSec}
+              aspectRatio={aspectRatio}
+            />
           ) : (
             <button
               type="button"
@@ -781,112 +299,17 @@ export default function AvatarStudioPage() {
         </div>
 
         {/* Right Column: Live Video Player Result (5 Cols) */}
-        <div className="lg:col-span-5 flex flex-col items-center space-y-4">
-          {/* Format Badge Indicator */}
-          <div className="flex items-center gap-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 px-3 py-1 rounded-full shadow-2xs">
-            <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Format: {aspectRatio}</span>
-            <span>·</span>
-            <span>Durasi: {targetDurationSec}s</span>
-          </div>
-
-          <div className={`relative w-full overflow-hidden rounded-[32px] border-[6px] border-slate-200 bg-slate-100 shadow-xl ring-1 ring-slate-300/80 transition-all duration-300 ${frameAspectClass}`}>
-            {generatedVideoUrl ? (
-              <video
-                src={generatedVideoUrl}
-                controls
-                autoPlay
-                loop
-                playsInline
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="h-full w-full flex flex-col justify-between p-4 relative bg-slate-50">
-                {/* Smartphone Dynamic Island / Notch */}
-                <div className="flex flex-col items-center gap-2 pt-1">
-                  <div className="h-3.5 w-20 rounded-full bg-slate-200/80" />
-                  <div className="rounded-full bg-slate-900 px-3 py-0.5 text-center text-[10px] font-bold text-white shadow-sm tracking-wide">
-                    {hookHeadline}
-                  </div>
-                </div>
-
-                {/* Preview Mockup Canvas */}
-                <div className="flex-1 flex flex-col justify-center items-center my-3 space-y-2">
-                  <div className="w-full h-full flex flex-col gap-2">
-                    {/* Upper: Product */}
-                    <div className="flex-1 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-xs relative">
-                      {productPreview ? (
-                        <img src={productPreview} alt="Produk" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex flex-col items-center text-center p-2">
-                          <ShoppingBag className="h-5 w-5 text-slate-300 mb-1" />
-                          <span className="text-[10px] text-slate-400 font-semibold">Model Barang (Produk)</span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Lower: Character */}
-                    <div className="flex-1 rounded-2xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shadow-xs relative">
-                      {charPreview ? (
-                        <img src={charPreview} alt="Model Char" className="h-full w-full object-cover" />
-                      ) : (
-                        <div className="flex flex-col items-center text-center p-2">
-                          <UserCheck className="h-5 w-5 text-slate-300 mb-1" />
-                          <span className="text-[10px] text-slate-400 font-semibold">Model Char (Karakter)</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Subtitle Caption Overlay */}
-                <div className="z-10 rounded-2xl bg-white/95 px-3 py-2 text-center backdrop-blur border border-slate-200 shadow-sm">
-                  <p className="text-[10px] font-semibold text-slate-800 line-clamp-2 leading-relaxed">
-                    &ldquo;{scriptText || `Suara narasi VO (${targetDurationSec}s) akan diputar di sini...`}&rdquo;
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Audio Player and Download Section */}
-          <div className="flex flex-col gap-2 w-full max-w-[340px]">
-            {generatedAudioUrl && (
-              <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-xs space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-800 flex items-center gap-1.5">
-                    <Volume2 className="h-3.5 w-3.5 text-slate-600" />
-                    <span>File Audio Voiceover (VO)</span>
-                  </span>
-                  <a
-                    href={generatedAudioUrl}
-                    download={`voiceover_${targetDurationSec}s.mp3`}
-                    className="text-[10px] font-bold text-slate-900 hover:underline"
-                  >
-                    Download MP3
-                  </a>
-                </div>
-                <audio src={generatedAudioUrl} controls className="w-full h-8" />
-              </div>
-            )}
-
-            {generatedVideoUrl && (
-              <a
-                href={generatedVideoUrl}
-                download={`ugc_video_${aspectRatio.replace(":", "x")}_${targetDurationSec}s.mp4`}
-                className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 py-3.5 text-xs font-bold text-white shadow-sm hover:bg-slate-800 transition-all"
-              >
-                <Download className="h-4 w-4" />
-                <span>Download Video MP4 ({aspectRatio})</span>
-              </a>
-            )}
-
-            <label className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-all shadow-xs cursor-pointer">
-              <Film className="h-3.5 w-3.5 text-slate-600" />
-              <span>Preview Video dari Google Flow (MP4)</span>
-              <input type="file" accept="video/*" onChange={handlePreviewFlowVideo} className="hidden" />
-            </label>
-          </div>
-        </div>
+        <VideoPlayerMockup
+          generatedVideoUrl={generatedVideoUrl}
+          generatedAudioUrl={generatedAudioUrl}
+          charPreview={charPreview}
+          productPreview={productPreview}
+          hookHeadline={hookHeadline}
+          scriptText={scriptText}
+          targetDurationSec={targetDurationSec}
+          aspectRatio={aspectRatio}
+          onPreviewFlowVideo={handlePreviewFlowVideo}
+        />
       </div>
     </div>
   );
