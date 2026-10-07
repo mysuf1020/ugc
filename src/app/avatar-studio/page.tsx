@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import {
-  Upload,
   UserCheck,
   ShoppingBag,
   Sparkles,
@@ -11,9 +10,9 @@ import {
   Volume2,
   Copy,
   Check,
-  AlertCircle,
   Film,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface NalarkaPrompts {
   scene1: string;
@@ -46,7 +45,6 @@ export default function AvatarStudioPage() {
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
   const [generatedPrompts, setGeneratedPrompts] = useState<NalarkaPrompts | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   async function ensureProject(): Promise<string> {
     if (projectId) return projectId;
@@ -69,7 +67,6 @@ export default function AvatarStudioPage() {
     if (!file) return;
 
     setUploadingChar(true);
-    setErrorMsg(null);
     try {
       const pId = await ensureProject();
       const formData = new FormData();
@@ -85,11 +82,12 @@ export default function AvatarStudioPage() {
       if (res.ok) {
         const data = await res.json();
         setCharPreview(data.url);
+        toast.success("Foto Model Karakter berhasil diunggah!");
       } else {
-        setErrorMsg("Gagal mengupload foto model karakter.");
+        toast.error("Gagal mengupload foto model karakter.");
       }
     } catch {
-      setErrorMsg("Terjadi kesalahan jaringan.");
+      toast.error("Terjadi kesalahan jaringan.");
     } finally {
       setUploadingChar(false);
     }
@@ -100,7 +98,6 @@ export default function AvatarStudioPage() {
     if (!file) return;
 
     setUploadingProduct(true);
-    setErrorMsg(null);
     try {
       const pId = await ensureProject();
       const formData = new FormData();
@@ -116,11 +113,12 @@ export default function AvatarStudioPage() {
       if (res.ok) {
         const data = await res.json();
         setProductPreview(data.url);
+        toast.success("Foto Model Barang berhasil diunggah!");
       } else {
-        setErrorMsg("Gagal mengupload foto model barang.");
+        toast.error("Gagal mengupload foto model barang.");
       }
     } catch {
-      setErrorMsg("Terjadi kesalahan jaringan.");
+      toast.error("Terjadi kesalahan jaringan.");
     } finally {
       setUploadingProduct(false);
     }
@@ -128,12 +126,11 @@ export default function AvatarStudioPage() {
 
   async function handleGenerateScript() {
     if (!brandName || !productUsp) {
-      setErrorMsg("Harap masukkan nama brand dan keunggulan produk terlebih dahulu.");
+      toast.error("Harap masukkan nama brand dan keunggulan produk terlebih dahulu.");
       return;
     }
 
     setGeneratingScript(true);
-    setErrorMsg(null);
     try {
       const pId = await ensureProject();
       const res = await fetch("/api/ai/script", {
@@ -148,9 +145,10 @@ export default function AvatarStudioPage() {
         const generatedSpeech = `${s.hookText} ${s.problemText} ${s.solutionText} ${s.ctaText}`.trim();
         setScriptText(generatedSpeech);
         setHookHeadline(s.hookText.slice(0, 36) + "!");
+        toast.success("Naskah ulasan AI berhasil dirumuskan!");
       }
     } catch {
-      setErrorMsg("Gagal menghasilkan naskah AI.");
+      toast.error("Gagal menghasilkan naskah AI.");
     } finally {
       setGeneratingScript(false);
     }
@@ -158,16 +156,15 @@ export default function AvatarStudioPage() {
 
   async function handleCreateVideo() {
     if (!charPreview || !productPreview) {
-      setErrorMsg("Harap upload Model Char (wajah) dan Model Barang (produk) terlebih dahulu.");
+      toast.error("Harap upload Model Char (wajah) dan Model Barang (produk) terlebih dahulu.");
       return;
     }
     if (!scriptText.trim()) {
-      setErrorMsg("Harap isi naskah yang akan disuarakan oleh voiceover.");
+      toast.error("Harap isi naskah yang akan disuarakan oleh voiceover.");
       return;
     }
 
     setGeneratingVideo(true);
-    setErrorMsg(null);
     setProgressText("Memproses suara Voiceover & merender video 1080x1920...");
 
     try {
@@ -190,12 +187,13 @@ export default function AvatarStudioPage() {
         setGeneratedVideoUrl(data.videoUrl);
         setGeneratedAudioUrl(data.audioUrl);
         setGeneratedPrompts(data.prompts);
+        toast.success("Video UGC dan Suara VO berhasil digenerate!");
       } else {
         const err = await res.json();
-        setErrorMsg(err.error || "Gagal membuat video.");
+        toast.error(err.error || "Gagal membuat video.");
       }
     } catch {
-      setErrorMsg("Terjadi gangguan jaringan saat memproses video.");
+      toast.error("Terjadi gangguan jaringan saat memproses video.");
     } finally {
       setGeneratingVideo(false);
     }
@@ -204,6 +202,7 @@ export default function AvatarStudioPage() {
   function copyToClipboard(text: string, key: string) {
     navigator.clipboard.writeText(text);
     setCopiedPrompt(key);
+    toast.success("Prompt berhasil disalin ke clipboard!");
     setTimeout(() => setCopiedPrompt(null), 2000);
   }
 
@@ -222,13 +221,6 @@ export default function AvatarStudioPage() {
           Unggah **Model Karakter (wajah)** dan **Model Barang (produk)**, sistem akan membuatkan video vertikal 9:16 lengkap dengan narasi suara review bahasa Indonesia dan teks hook.
         </p>
       </div>
-
-      {errorMsg && (
-        <div className="mb-6 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
-          <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* Left Column: Form & Asset Uploader (7 Cols) */}

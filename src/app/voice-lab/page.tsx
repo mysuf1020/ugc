@@ -7,6 +7,7 @@ import {
   Loader2,
   CheckCircle2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function VoiceLabPage() {
   const [selectedVoice, setSelectedVoice] = useState("id-ID-ArdiNeural");
@@ -52,7 +53,10 @@ export default function VoiceLabPage() {
   ];
 
   async function handleSynthesize() {
-    if (!sampleText.trim()) return;
+    if (!sampleText.trim()) {
+      toast.error("Harap ketik naskah terlebih dahulu.");
+      return;
+    }
 
     setSynthesizing(true);
     setAudioUrl(null);
@@ -69,9 +73,12 @@ export default function VoiceLabPage() {
       if (res.ok) {
         const data = await res.json();
         setAudioUrl(data.audioUrl);
+        toast.success("Suara voiceover berhasil disintesis!");
+      } else {
+        toast.error("Gagal mensintesis suara voiceover.");
       }
-    } catch (e) {
-      console.error(e);
+    } catch {
+      toast.error("Terjadi gangguan jaringan saat memproses suara.");
     } finally {
       setSynthesizing(false);
     }

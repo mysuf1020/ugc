@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { Toaster } from "sonner";
 
 export const metadata: Metadata = {
   title: "UGC Studio Pro - Enterprise Video Engine",
@@ -26,6 +27,9 @@ export default function RootLayout({
             {children}
           </main>
         </div>
+
+        {/* Global Toast Notifications */}
+        <Toaster position="top-right" richColors theme="light" closeButton />
       </body>
     </html>
   );

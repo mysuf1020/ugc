@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Shield, Volume2, Sparkles, CheckCircle2, AlertCircle, Save, Loader2, UserCheck } from "lucide-react";
+import { Shield, Volume2, Sparkles, Save, Loader2, UserCheck } from "lucide-react";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const [aiPreference, setAiPreference] = useState("gemini");
   const [talkingProvider, setTalkingProvider] = useState("did");
@@ -49,9 +49,12 @@ export default function SettingsPage() {
         setHasDId(data.hasDIdKey);
         setHasReplicate(data.hasReplicateToken);
         setHasPin(data.hasAdminPin);
+      } else {
+        toast.error("Gagal memuat pengaturan studio.");
       }
     } catch (err) {
       console.error(err);
+      toast.error("Gagal memuat pengaturan studio.");
     } finally {
       setLoading(false);
     }
@@ -60,11 +63,10 @@ export default function SettingsPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setMessage(null);
 
     try {
       const res = await fetch("/api/settings", {
-        method: "PUT",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           aiProviderPreference: aiPreference,
@@ -80,14 +82,14 @@ export default function SettingsPage() {
       });
 
       if (res.ok) {
-        setMessage({ type: "success", text: "Pengaturan studio berhasil disimpan." });
+        toast.success("Pengaturan studio berhasil disimpan!");
         fetchSettings();
       } else {
         const err = await res.json();
-        setMessage({ type: "error", text: err.error || "Gagal menyimpan pengaturan." });
+        toast.error(err.error || "Gagal menyimpan pengaturan studio.");
       }
     } catch {
-      setMessage({ type: "error", text: "Terjadi kesalahan jaringan." });
+      toast.error("Terjadi kesalahan jaringan.");
     } finally {
       setSaving(false);
     }
@@ -109,23 +111,6 @@ export default function SettingsPage() {
           Kelola kunci API Talking Avatar (D-ID / Replicate), AI scriptwriting, dan proteksi server studio.
         </p>
       </div>
-
-      {message && (
-        <div
-          className={`mb-6 flex items-center gap-3 rounded-xl border p-4 text-sm font-medium ${
-            message.type === "success"
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-red-200 bg-red-50 text-red-800"
-          }`}
-        >
-          {message.type === "success" ? (
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
-          ) : (
-            <AlertCircle className="h-5 w-5 shrink-0 text-red-600" />
-          )}
-          <span>{message.text}</span>
-        </div>
-      )}
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Section: AI Lip-Sync Talking Avatar Engine */}
