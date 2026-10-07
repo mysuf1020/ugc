@@ -88,6 +88,55 @@ export function generateNalarkaPrompts(params: {
   };
 }
 
+// 2b. Stitch Google Flow Video with Voiceover Audio
+export async function stitchFlowVideoWithVoiceover(params: {
+  projectId: string;
+  flowVideoDiskPath: string;
+  audioDiskPath: string;
+  hookHeadline?: string;
+}): Promise<{ videoUrl: string; durationSec: number }> {
+  const exportDir = path.join(process.cwd(), "public", "uploads", "projects", params.projectId, "exports");
+  if (!fs.existsSync(exportDir)) {
+    fs.mkdirSync(exportDir, { recursive: true });
+  }
+
+  const outputFileName = `ugc_flow_final_${Date.now()}.mp4`;
+  const outputPath = path.join(exportDir, outputFileName);
+  const publicVideoUrl = `/uploads/projects/${params.projectId}/exports/${outputFileName}`;
+
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg()
+      .input(params.flowVideoDiskPath)
+      .input(params.audioDiskPath)
+      .outputOptions([
+        "-c:v libx264",
+        "-pix_fmt yuv420p",
+        "-c:a aac",
+        "-b:a 192k",
+        "-shortest",
+        "-preset fast",
+      ])
+      .output(outputPath)
+      .on("end", () => resolve())
+      .on("error", (err) => {
+        console.error("FFmpeg Flow stitch error:", err);
+        reject(err);
+      })
+      .run();
+  });
+
+  await prisma.project.update({
+    where: { id: params.projectId },
+    data: {
+      status: "COMPLETED",
+      finalVideoUrl: publicVideoUrl,
+    },
+  });
+
+  return { videoUrl: publicVideoUrl, durationSec: 10 };
+}
+
+
 // Helper: Call D-ID API to generate genuine AI talking video from face image + speech script
 async function generateDidTalkingVideo(
   didKey: string,
