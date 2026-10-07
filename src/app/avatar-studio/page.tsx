@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   UserCheck,
   ShoppingBag,
@@ -41,10 +41,63 @@ export default function AvatarStudioPage() {
   // Video Generation & Result
   const [generatingVideo, setGeneratingVideo] = useState(false);
   const [progressText, setProgressText] = useState("");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [generatedVideoUrl, setGeneratedVideoUrl] = useState<string | null>(null);
   const [generatedAudioUrl, setGeneratedAudioUrl] = useState<string | null>(null);
   const [generatedPrompts, setGeneratedPrompts] = useState<NalarkaPrompts | null>(null);
   const [copiedPrompt, setCopiedPrompt] = useState<string | null>(null);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (generatingVideo) {
+      setElapsedSeconds(0);
+      timer = setInterval(() => {
+        setElapsedSeconds((prev) => prev + 1);
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [generatingVideo]);
+
+  const stages = [
+    {
+      title: "1. Upload & Verifikasi Aset",
+      subtitle: "Menyiapkan foto wajah & produk ke storage",
+    },
+    {
+      title: "2. Sintesis Suara Voiceover (VO)",
+      subtitle: "Membuat narasi ulasan natural bahasa Indonesia",
+    },
+    {
+      title: "3. Neural Face Lip-Sync (D-ID)",
+      subtitle: "AI cloud merender gerakan wajah & bibir berbicara (±2-3 menit)",
+    },
+    {
+      title: "4. Finalisasi Video 9:16 (FFmpeg)",
+      subtitle: "Menjahit video AI, produk & kanvas vertikal",
+    },
+  ];
+
+  let currentStageIndex = 0;
+  if (elapsedSeconds >= 140) currentStageIndex = 3;
+  else if (elapsedSeconds >= 25) currentStageIndex = 2;
+  else if (elapsedSeconds >= 8) currentStageIndex = 1;
+
+  let progressPercent = 5;
+  if (elapsedSeconds < 8) {
+    progressPercent = 5 + Math.round((elapsedSeconds / 8) * 15);
+  } else if (elapsedSeconds < 25) {
+    progressPercent = 20 + Math.round(((elapsedSeconds - 8) / 17) * 15);
+  } else if (elapsedSeconds < 160) {
+    progressPercent = 35 + Math.round(((elapsedSeconds - 25) / 135) * 50);
+  } else {
+    progressPercent = Math.min(97, 85 + Math.round(((elapsedSeconds - 160) / 40) * 12));
+  }
+
+  function formatTime(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  }
 
   async function ensureProject(): Promise<string> {
     if (projectId) return projectId;
@@ -393,25 +446,100 @@ export default function AvatarStudioPage() {
             </div>
           </div>
 
-          {/* Action Button */}
-          <button
-            type="button"
-            onClick={handleCreateVideo}
-            disabled={generatingVideo || !charPreview || !productPreview}
-            className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 transition-all active:scale-[0.99] disabled:opacity-40"
-          >
-            {generatingVideo ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin text-white" />
-                <span>{progressText}</span>
-              </>
-            ) : (
-              <>
-                <Film className="h-4 w-4" />
-                <span>Generate Video UGC + Suara VO (9:16)</span>
-              </>
-            )}
-          </button>
+          {/* Generation Progress Monitor or Action Button */}
+          {generatingVideo ? (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+              {/* Header with Live Status & Timer */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-slate-900"></span>
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">AI Video Engine Sedang Berjalan...</h3>
+                    <p className="text-[11px] text-slate-500 font-medium">
+                      {stages[currentStageIndex]?.subtitle}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-mono font-bold text-slate-700 border border-slate-200">
+                    ⏱ {formatTime(elapsedSeconds)}
+                  </span>
+                  <span className="rounded-lg bg-slate-900 px-2.5 py-1 text-xs font-mono font-bold text-white shadow-xs">
+                    {progressPercent}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Smooth Progress Bar */}
+              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
+                <div
+                  className="bg-slate-900 h-2.5 rounded-full transition-all duration-700 ease-out"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+
+              {/* 4-Step Checklist */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                {stages.map((stg, idx) => {
+                  const isDone = currentStageIndex > idx;
+                  const isCurrent = currentStageIndex === idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`flex items-start gap-2.5 rounded-xl border p-2.5 transition-all ${
+                        isCurrent
+                          ? "border-slate-900 bg-slate-50 shadow-xs ring-1 ring-slate-900"
+                          : isDone
+                          ? "border-slate-200 bg-white text-slate-600"
+                          : "border-slate-100 bg-slate-50/50 opacity-60 text-slate-400"
+                      }`}
+                    >
+                      <div className="mt-0.5">
+                        {isDone ? (
+                          <Check className="h-4 w-4 text-emerald-600" />
+                        ) : isCurrent ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-slate-900" />
+                        ) : (
+                          <div className="h-4 w-4 rounded-full border border-slate-300" />
+                        )}
+                      </div>
+                      <div>
+                        <span className={`text-xs font-bold block ${isCurrent ? "text-slate-900" : isDone ? "text-slate-800" : "text-slate-400"}`}>
+                          {stg.title}
+                        </span>
+                        <span className="text-[10px] text-slate-500 leading-tight block mt-0.5">
+                          {stg.subtitle}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Informational Guidance Note */}
+              <div className="rounded-xl bg-slate-50 p-3 border border-slate-200 flex items-center gap-2 text-[11px] text-slate-600">
+                <Sparkles className="h-4 w-4 text-amber-500 shrink-0" />
+                <span>
+                  Antrean cloud AI memproses gerakan wajah & lip-sync secara mendalam. Video akan langsung otomatis diputar di layar preview kanan setelah selesai.
+                </span>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCreateVideo}
+              disabled={!charPreview || !productPreview}
+              className="w-full flex items-center justify-center gap-2.5 rounded-xl bg-slate-900 py-3.5 text-sm font-bold text-white shadow-sm hover:bg-slate-800 transition-all active:scale-[0.99] disabled:opacity-40"
+            >
+              <Film className="h-4 w-4" />
+              <span>Generate Video UGC + Suara VO (9:16)</span>
+            </button>
+          )}
+
 
           {/* Nalarka Prompts Section */}
           {generatedPrompts && (

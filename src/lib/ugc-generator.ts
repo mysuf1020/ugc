@@ -150,24 +150,27 @@ async function generateDidTalkingVideo(
     const talkData = await talkRes.json();
     const talkId = talkData.id;
 
-    // 3. Poll for completion (up to 45 attempts x 2.5s = ~110s)
-    for (let i = 0; i < 45; i++) {
-      await new Promise((r) => setTimeout(r, 2500));
+    // 3. Poll for completion (up to 90 attempts x 3s = ~270s / 4.5 minutes)
+    for (let i = 0; i < 90; i++) {
+      await new Promise((r) => setTimeout(r, 3000));
       const pollRes = await fetch(`https://api.d-id.com/talks/${talkId}`, {
         headers: { Authorization: `Basic ${basicAuth}` },
       });
       if (pollRes.ok) {
         const pollData = await pollRes.json();
+        console.log(`[D-ID Engine] Polling talk ${talkId} (${i + 1}/90): ${pollData.status}`);
         if (pollData.status === "done" && pollData.result_url) {
+          console.log(`[D-ID Engine] Talk ${talkId} finished successfully! Result URL ready.`);
           return pollData.result_url;
         }
         if (pollData.status === "error") {
-          console.warn("D-ID talk returned error:", pollData.error);
+          console.warn("[D-ID Engine] Talk returned error:", pollData.error);
           return null;
         }
       }
     }
 
+    console.warn(`[D-ID Engine] Polling timed out for talk ${talkId} after 270 seconds.`);
     return null;
   } catch (err) {
     console.error("D-ID talking avatar error:", err);
